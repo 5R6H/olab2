@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sphere and Conical Frustum</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <aside class="ui-panel">
+      <h1>Shape Controls</h1>
+      <p class="ui-subtitle">Adjust color, frustum dimensions, zoom, and frame size.</p>
+
+      <label class="field">
+        <span>Shape color</span>
+        <input id="shape-color" type="color" value="#1c1c1c" />
+      </label>
+
+      <label class="field">
+        <span>Render mode</span>
+        <select id="shading-mode">
+          <option value="lit" selected>Lit</option>
+          <option value="flat">Flat color</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Frustum length</span>
+        <input id="frustum-length-range" type="range" min="476.745" max="2400" step="0.1" value="476.745" />
+        <input id="frustum-length-number" type="number" min="476.745" max="2400" step="0.1" value="476.745" />
+      </label>
+
+      <label class="field">
+        <span>Large base diameter</span>
+        <input id="frustum-diameter-range" type="range" min="239.78" max="1400" step="0.1" value="239.78" />
+        <input id="frustum-diameter-number" type="number" min="239.78" max="1400" step="0.1" value="239.78" />
+      </label>
+
+      <label class="toggle">
+        <input id="proportion-lock" type="checkbox" checked />
+        <span>Scale proportionally</span>
+      </label>
+
+      <label class="field">
+        <span>Zoom</span>
+        <input id="zoom-range" type="range" min="5" max="220" step="0.1" value="12.2" />
+      </label>
+
+      <label class="field">
+        <span>Play mode</span>
+        <select id="play-mode">
+          <option value="off" selected>Off</option>
+          <option value="play1">Play mode 1</option>
+          <option value="play2">Play mode 2 (random dimensions)</option>
+          <option value="play3">Play mode 3 (auto fit frustum)</option>
+        </select>
+      </label>
+
+      <div class="frame-size">
+        <label class="field compact">
+          <span>Frame width</span>
+          <input id="frame-width-input" type="number" min="260" max="2200" step="1" value="600" />
+        </label>
+        <label class="field compact">
+          <span>Frame height</span>
+          <input id="frame-height-input" type="number" min="300" max="2200" step="1" value="800" />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Background image</span>
+        <input id="frame-image-input" type="file" accept="image/*" />
+      </label>
+      <button id="clear-image-btn" type="button">Clear Background Image</button>
+
+      <button id="reset-btn" type="button">Reset</button>
+      <button id="copy-svg-btn" type="button">Copy Current Frame As SVG</button>
+      <div class="angles">
+        <label><span>X</span><input id="rot-x-input" type="number" step="0.1" value="0" /></label>
+        <label><span>Y</span><input id="rot-y-input" type="number" step="0.1" value="0" /></label>
+        <label><span>Z</span><input id="rot-z-input" type="number" step="0.1" value="0" /></label>
+      </div>
+      <p id="copy-status" class="copy-status"></p>
+    </aside>
+
+    <main id="frame-shell">
+      <div id="frame" style="width: 600px; height: 800px">
+        <img id="frame-bg-image" alt="" />
+        <canvas id="scene"></canvas>
+      </div>
+      <div id="resize-handle" aria-label="Resize frame" title="Drag to resize"></div>
+    </main>
+
+    <script>
+      (function () {
+        function showError(message) {
+          var box = document.getElementById("runtime-error-box");
+          if (!box) {
+            box = document.createElement("div");
+            box.id = "runtime-error-box";
+            box.style.position = "fixed";
+            box.style.right = "14px";
+            box.style.bottom = "14px";
+            box.style.maxWidth = "min(560px, calc(100vw - 28px))";
+            box.style.padding = "10px 12px";
+            box.style.borderRadius = "12px";
+            box.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, monospace";
+            box.style.fontSize = "12px";
+            box.style.lineHeight = "1.4";
+            box.style.color = "#fff";
+            box.style.background = "rgba(140, 10, 10, 0.9)";
+            box.style.boxShadow = "0 10px 30px rgba(0,0,0,0.25)";
+            box.style.zIndex = "9999";
+            document.body.appendChild(box);
+          }
+          box.textContent = message;
+        }
+
+        window.addEventListener("error", function (event) {
+          if (!event) return;
+          var msg = event.message || "Unknown runtime error";
+          var file = event.filename ? " @ " + event.filename : "";
+          var line = event.lineno ? ":" + event.lineno : "";
+          showError("JS Error: " + msg + file + line);
+        });
+
+        window.addEventListener("unhandledrejection", function (event) {
+          var reason = event && event.reason ? String(event.reason) : "Unknown promise rejection";
+          showError("Promise Error: " + reason);
+        });
+      })();
+    </script>
+    <script src="./main.js"></script>
+  </body>
+</html>
