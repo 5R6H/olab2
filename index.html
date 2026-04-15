@@ -9,83 +9,180 @@
   <body>
     <aside class="ui-panel">
       <h1>Shape Controls</h1>
-      <p class="ui-subtitle">Adjust color, frustum dimensions, zoom, and frame size.</p>
+      <p class="ui-subtitle">Adjust look, geometry, playback, and frame layout.</p>
 
-      <label class="field">
-        <span>Shape color</span>
-        <input id="shape-color" type="color" value="#1c1c1c" />
-      </label>
-
-      <label class="field">
-        <span>Render mode</span>
-        <select id="shading-mode">
-          <option value="lit" selected>Lit</option>
-          <option value="flat">Flat color</option>
-        </select>
-      </label>
-
-      <label class="field">
-        <span>Frustum length</span>
-        <input id="frustum-length-range" type="range" min="476.745" max="2400" step="0.1" value="476.745" />
-        <input id="frustum-length-number" type="number" min="476.745" max="2400" step="0.1" value="476.745" />
-      </label>
-
-      <label class="field">
-        <span>Large base diameter</span>
-        <input id="frustum-diameter-range" type="range" min="239.78" max="1400" step="0.1" value="239.78" />
-        <input id="frustum-diameter-number" type="number" min="239.78" max="1400" step="0.1" value="239.78" />
-      </label>
-
-      <label class="toggle">
-        <input id="proportion-lock" type="checkbox" checked />
-        <span>Scale proportionally</span>
-      </label>
-
-      <label class="field">
-        <span>Zoom</span>
-        <input id="zoom-range" type="range" min="5" max="220" step="0.1" value="12.2" />
-      </label>
-
-      <label class="field">
-        <span>Play mode</span>
-        <select id="play-mode">
-          <option value="off" selected>Off</option>
-          <option value="play1">Play mode 1</option>
-          <option value="play2">Play mode 2 (random dimensions)</option>
-          <option value="play3">Play mode 3 (auto fit frustum)</option>
-        </select>
-      </label>
-
-      <div class="frame-size">
-        <label class="field compact">
-          <span>Frame width</span>
-          <input id="frame-width-input" type="number" min="260" max="2200" step="1" value="600" />
+      <section class="ui-group">
+        <h2 class="group-title">Appearance</h2>
+        <label class="field">
+          <span>Shape color</span>
+          <input id="shape-color" type="color" value="#1c1c1c" />
         </label>
-        <label class="field compact">
-          <span>Frame height</span>
-          <input id="frame-height-input" type="number" min="300" max="2200" step="1" value="800" />
+
+        <label class="field">
+          <span>Render mode</span>
+          <select id="shading-mode">
+            <option value="lit" selected>Lit</option>
+            <option value="flat">Flat color</option>
+          </select>
         </label>
-      </div>
+      </section>
 
-      <label class="field">
-        <span>Background image</span>
-        <input id="frame-image-input" type="file" accept="image/*" />
-      </label>
-      <button id="clear-image-btn" type="button">Clear Background Image</button>
+      <section class="ui-group">
+        <h2 class="group-title">Geometry</h2>
+        <label class="field">
+          <span>Frustum length</span>
+          <input id="frustum-length-range" type="range" min="476.745" max="2400" step="0.1" value="476.745" />
+          <input id="frustum-length-number" type="number" min="476.745" max="2400" step="0.1" value="476.745" />
+        </label>
 
-      <button id="reset-btn" type="button">Reset</button>
-      <button id="copy-svg-btn" type="button">Copy Current Frame As SVG</button>
-      <div class="angles">
-        <label><span>X</span><input id="rot-x-input" type="number" step="0.1" value="0" /></label>
-        <label><span>Y</span><input id="rot-y-input" type="number" step="0.1" value="0" /></label>
-        <label><span>Z</span><input id="rot-z-input" type="number" step="0.1" value="0" /></label>
-      </div>
+        <label class="field">
+          <span>Large base diameter</span>
+          <input id="frustum-diameter-range" type="range" min="239.78" max="1400" step="0.1" value="239.78" />
+          <input id="frustum-diameter-number" type="number" min="239.78" max="1400" step="0.1" value="239.78" />
+        </label>
+
+        <label class="field">
+          <span>Gap (x sphere diameter)</span>
+          <input id="gap-range" type="range" min="0" max="8" step="0.1" value="0.6" />
+          <input id="gap-number" type="number" min="0" max="8" step="0.1" value="0.6" />
+        </label>
+
+        <label class="toggle">
+          <input id="proportion-lock" type="checkbox" checked />
+          <span>Scale proportionally</span>
+        </label>
+      </section>
+
+      <section class="ui-group">
+        <h2 class="group-title">Playback</h2>
+        <label class="field">
+          <span>Zoom</span>
+          <input id="zoom-range" type="range" min="5" max="220" step="0.1" value="12.2" />
+          <input id="zoom-number" type="number" min="5" max="220" step="0.1" value="12.2" />
+        </label>
+
+        <label class="field">
+          <span>Play mode</span>
+          <select id="play-mode">
+            <option value="off" selected>Off</option>
+            <option value="play1">1 Organic orbit</option>
+            <option value="play2">2 Organic size flow</option>
+            <option value="play3">3 Auto-fit frustum</option>
+            <option value="play4">4 Hold-spin loop</option>
+            <option value="play5">5 Shape / OLAB switch</option>
+          </select>
+        </label>
+
+        <div id="mode4-controls" class="mode4-controls" hidden>
+          <label class="field">
+            <span>4 expanded length</span>
+            <input
+              id="mode4-expanded-length-input"
+              type="number"
+              min="476.745"
+              max="8000"
+              step="1"
+              value="3500"
+            />
+          </label>
+
+          <label class="field">
+            <span>4 easing</span>
+            <input id="mode4-ease-range" type="range" min="0" max="1" step="0.01" value="1" />
+            <input id="mode4-ease-number" type="number" min="0" max="1" step="0.01" value="1" />
+          </label>
+
+          <label class="field">
+            <span>4 zoom amount</span>
+            <input id="mode4-zoom-amount-range" type="range" min="0" max="120" step="0.1" value="120" />
+            <input id="mode4-zoom-amount-number" type="number" min="0" max="120" step="0.1" value="120" />
+          </label>
+
+          <label class="field">
+            <span>4 image mode</span>
+            <select id="mode4-image-mode">
+              <option value="mask" selected>Mask (screen-locked)</option>
+              <option value="follow">Follow base rotation</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>4 mask images</span>
+            <input id="mode4-images-input" type="file" accept="image/*" multiple />
+          </label>
+          <button id="clear-mode4-images-btn" type="button">Clear Play4 Images</button>
+          <input id="mode4-replace-input" type="file" accept="image/*" hidden />
+          <div id="mode4-images-list" class="mode4-images-list"></div>
+          <p id="mode4-images-status" class="copy-status"></p>
+        </div>
+
+        <div id="mode5-controls" class="mode5-controls" hidden>
+          <label class="field">
+            <span>5 center mode</span>
+            <select id="mode5-center-mode">
+              <option value="anchor" selected>Sphere / O center</option>
+              <option value="full">Whole figure center (realtime)</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="ui-group">
+        <h2 class="group-title">Frame</h2>
+        <label class="field">
+          <span>Frame background</span>
+          <input id="frame-bg-color" type="color" value="#ffffff" />
+        </label>
+
+        <div class="frame-size">
+          <label class="field compact">
+            <span>Frame width</span>
+            <input id="frame-width-input" type="number" min="260" max="2200" step="1" value="600" />
+          </label>
+          <label class="field compact">
+            <span>Frame height</span>
+            <input id="frame-height-input" type="number" min="300" max="2200" step="1" value="800" />
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Background image</span>
+          <input id="frame-image-input" type="file" accept="image/*" />
+        </label>
+        <button id="clear-image-btn" type="button">Clear Background Image</button>
+      </section>
+
+      <section class="ui-group">
+        <h2 class="group-title">Rotation</h2>
+        <div class="angles">
+          <label><span>X</span><input id="rot-x-input" type="number" step="0.1" value="0" /></label>
+          <label><span>Y</span><input id="rot-y-input" type="number" step="0.1" value="0" /></label>
+          <label><span>Z</span><input id="rot-z-input" type="number" step="0.1" value="0" /></label>
+        </div>
+      </section>
+
+      <section class="ui-group ui-actions">
+        <button id="reset-btn" type="button">Reset</button>
+        <button id="copy-svg-btn" type="button">Copy Current Frame As SVG</button>
+      </section>
       <p id="copy-status" class="copy-status"></p>
     </aside>
 
     <main id="frame-shell">
       <div id="frame" style="width: 600px; height: 800px">
         <img id="frame-bg-image" alt="" />
+        <div id="mode5-olab-wrap" aria-hidden="true">
+          <svg id="mode5-olab-svg" viewBox="0 0 73 22" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <g id="mode5-olab-lab">
+              <path d="M31.8684 17.2825H36.809V21.3852H31.8879C29.622 21.3852 27.7852 19.5483 27.7852 17.2825L27.7853 0H31.8684C31.8684 0 31.8684 1.75118 31.8684 4.10689V17.2825Z" fill="currentColor"/>
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M38.0678 16.2002C38.0678 13.2023 40.5946 10.6946 43.7068 10.7015L52.9518 10.7216L48.9388 18.1887H48.4268C47.6423 20.4899 45.1422 21.5778 43.5659 21.5778L43.2768 21.5708C40.397 21.4253 38.2232 19.3663 38.0749 16.4893L38.0678 16.2002ZM43.7406 17.8218C42.6108 17.8218 41.8243 16.9355 41.8243 15.9541C41.8243 14.9313 42.6635 14.1007 43.6983 14.1031L48.86 14.1125C48.2114 15.8907 45.8177 17.8217 43.7406 17.8218Z" fill="currentColor"/>
+              <path d="M46.61 4.15087C50.1194 4.15104 52.9639 6.99683 52.964 10.5063V17.3004H55.1207V21.3724H52.1187C50.3522 21.3724 48.9203 19.9404 48.9203 18.174L48.9202 10.2718C48.9201 8.99565 47.8859 7.96162 46.6099 7.96145L39.9736 7.96081L39.9751 4.15023L46.61 4.15087Z" fill="currentColor"/>
+              <path d="M60.8377 0.000237605V21.3881H56.7288V0.000237786L60.8377 0.000237605Z" fill="currentColor"/>
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M65.8805 21.5781L65.1454 21.5682C63.6153 21.5682 61.9728 20.5504 61.3251 18.6164H60.8447C59.9213 17.1759 59.3543 15.4538 59.3543 14.0421V11.5138C59.3543 10.0566 59.878 8.42173 60.8305 7.0026H61.3251C61.9698 5.29195 64.1546 4.03519 65.8805 4.03519L66.2276 4.04365C69.7319 4.04365 72.5062 7.35182 72.5066 11.1841V14.407C72.5066 18.3657 69.5163 21.5781 65.8805 21.5781ZM68.4494 11.5204V14.046C68.4494 16.0765 66.7162 17.6153 64.5182 17.6156C62.7065 17.6156 60.9281 16.1694 60.9281 14.046V11.5204C60.9281 9.79871 62.383 8.00312 64.5273 8.00312C66.9593 8.00312 68.4491 9.81217 68.4494 11.5204Z" fill="currentColor"/>
+            </g>
+            <path d="M8.74707 4.08203C13.5779 4.08203 17.4941 7.99823 17.4941 12.8291C17.494 17.6598 13.5778 21.5762 8.74707 21.5762C3.9163 21.5762 0.000166915 17.6598 0 12.8291C0 7.99823 3.9162 4.08203 8.74707 4.08203ZM8.74512 8.31738C6.25392 8.31738 4.2344 10.3369 4.23438 12.8281C4.23438 15.3193 6.25391 17.3389 8.74512 17.3389C11.2363 17.3388 13.2559 15.3193 13.2559 12.8281C13.2558 10.337 11.2363 8.31745 8.74512 8.31738Z" fill="currentColor"/>
+          </svg>
+        </div>
         <canvas id="scene"></canvas>
       </div>
       <div id="resize-handle" aria-label="Resize frame" title="Drag to resize"></div>
