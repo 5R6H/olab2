@@ -375,7 +375,10 @@ body {
 
 #frame-shell {
   position: fixed;
-  inset: 0;
+  left: var(--workspace-left, 0px);
+  top: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;

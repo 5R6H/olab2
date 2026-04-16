@@ -23,22 +23,34 @@
           <select id="shading-mode">
             <option value="lit" selected>Lit</option>
             <option value="flat">Flat color</option>
+            <option value="depth">Depth map</option>
           </select>
         </label>
+
+        <div id="depth-controls" class="mode5-controls" hidden>
+          <label class="toggle">
+            <input id="depth-blur-toggle" type="checkbox" />
+            <span>模糊</span>
+          </label>
+          <label class="toggle">
+            <input id="depth-dynamic-toggle" type="checkbox" />
+            <span>动态</span>
+          </label>
+        </div>
       </section>
 
       <section class="ui-group">
         <h2 class="group-title">Geometry</h2>
         <label class="field">
           <span>Frustum length</span>
-          <input id="frustum-length-range" type="range" min="476.745" max="2400" step="0.1" value="476.745" />
-          <input id="frustum-length-number" type="number" min="476.745" max="2400" step="0.1" value="476.745" />
+          <input id="frustum-length-range" type="range" min="476.745" max="10000" step="0.1" value="476.745" />
+          <input id="frustum-length-number" type="number" min="476.745" max="10000" step="0.1" value="476.745" />
         </label>
 
         <label class="field">
           <span>Large base diameter</span>
-          <input id="frustum-diameter-range" type="range" min="239.78" max="1400" step="0.1" value="239.78" />
-          <input id="frustum-diameter-number" type="number" min="239.78" max="1400" step="0.1" value="239.78" />
+          <input id="frustum-diameter-range" type="range" min="239.78" max="5029.7444" step="0.1" value="239.78" />
+          <input id="frustum-diameter-number" type="number" min="239.78" max="5029.7444" step="0.1" value="239.78" />
         </label>
 
         <label class="field">
@@ -67,39 +79,40 @@
             <option value="off" selected>Off</option>
             <option value="play1">1 Organic orbit</option>
             <option value="play2">2 Organic size flow</option>
-            <option value="play3">3 Auto-fit frustum</option>
-            <option value="play4">4 Hold-spin loop</option>
-            <option value="play5">5 Shape / OLAB switch</option>
+            <option value="play3">3 Long fixed orbit</option>
+            <option value="play4">4 Auto-fit frustum</option>
+            <option value="play5">5 Hold-spin loop</option>
+            <option value="play6">6 Shape / OLAB switch</option>
           </select>
         </label>
 
         <div id="mode4-controls" class="mode4-controls" hidden>
           <label class="field">
-            <span>4 expanded length</span>
+            <span>5 expanded length</span>
             <input
               id="mode4-expanded-length-input"
               type="number"
               min="476.745"
-              max="8000"
+              max="10000"
               step="1"
               value="3500"
             />
           </label>
 
           <label class="field">
-            <span>4 easing</span>
+            <span>5 easing</span>
             <input id="mode4-ease-range" type="range" min="0" max="1" step="0.01" value="1" />
             <input id="mode4-ease-number" type="number" min="0" max="1" step="0.01" value="1" />
           </label>
 
           <label class="field">
-            <span>4 zoom amount</span>
+            <span>5 zoom amount</span>
             <input id="mode4-zoom-amount-range" type="range" min="0" max="120" step="0.1" value="120" />
             <input id="mode4-zoom-amount-number" type="number" min="0" max="120" step="0.1" value="120" />
           </label>
 
           <label class="field">
-            <span>4 image mode</span>
+            <span>5 image mode</span>
             <select id="mode4-image-mode">
               <option value="mask" selected>Mask (screen-locked)</option>
               <option value="follow">Follow base rotation</option>
@@ -107,10 +120,10 @@
           </label>
 
           <label class="field">
-            <span>4 mask images</span>
+            <span>5 mask images</span>
             <input id="mode4-images-input" type="file" accept="image/*" multiple />
           </label>
-          <button id="clear-mode4-images-btn" type="button">Clear Play4 Images</button>
+          <button id="clear-mode4-images-btn" type="button">Clear Play5 Images</button>
           <input id="mode4-replace-input" type="file" accept="image/*" hidden />
           <div id="mode4-images-list" class="mode4-images-list"></div>
           <p id="mode4-images-status" class="copy-status"></p>
@@ -118,7 +131,7 @@
 
         <div id="mode5-controls" class="mode5-controls" hidden>
           <label class="field">
-            <span>5 center mode</span>
+            <span>6 center mode</span>
             <select id="mode5-center-mode">
               <option value="anchor" selected>Sphere / O center</option>
               <option value="full">Whole figure center (realtime)</option>

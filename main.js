@@ -3,6 +3,7 @@
   const frame = document.getElementById("frame");
   const frameShell = document.getElementById("frame-shell");
   const resizeHandle = document.getElementById("resize-handle");
+  const uiPanel = document.querySelector(".ui-panel");
 
   const shapeColorInput = document.getElementById("shape-color");
   const frustumLengthRange = document.getElementById("frustum-length-range");
@@ -12,6 +13,9 @@
   const gapRange = document.getElementById("gap-range");
   const gapNumber = document.getElementById("gap-number");
   const shadingModeSelect = document.getElementById("shading-mode");
+  const depthControls = document.getElementById("depth-controls");
+  const depthBlurToggle = document.getElementById("depth-blur-toggle");
+  const depthDynamicToggle = document.getElementById("depth-dynamic-toggle");
   const playModeSelect = document.getElementById("play-mode");
   const mode4ExpandedLengthInput = document.getElementById("mode4-expanded-length-input");
   const mode4EaseRange = document.getElementById("mode4-ease-range");
@@ -83,12 +87,14 @@
     minGapRatio: 0,
     maxGapRatio: 8,
     minLengthSvg: 476.745,
-    maxLengthSvg: 2400,
+    maxLengthSvg: 10000,
     minLargeDiameterSvg: 239.78,
-    maxLargeDiameterSvg: 1400,
+    maxLargeDiameterSvg:
+      (239.78 / 476.745) * 10000,
     minMode4ExpandedLengthSvg: 476.745,
-    maxMode4ExpandedLengthSvg: 8000,
+    maxMode4ExpandedLengthSvg: 10000,
     defaultMode4ExpandedLengthSvg: 3500,
+    fixedPlay3LengthSvg: 10000,
     minMode4Ease: 0,
     maxMode4Ease: 1,
     defaultMode4Ease: 1,
@@ -134,6 +140,8 @@
       constants.defaultFrustumLargeDiameterSvg / constants.defaultFrustumLengthSvg,
     cameraZ: constants.defaultCameraZ,
     shadingMode: "lit",
+    depthBlur: false,
+    depthDynamic: false,
     playMode: "off",
   };
   const vertexSource = `
@@ -220,6 +228,11 @@
     uniform vec3 uLightDir;
     uniform vec3 uEyePos;
     uniform float uFlatMode;
+    uniform float uDepthMode;
+    uniform vec3 uDepthOrigin;
+    uniform float uDepthMaxDistance;
+    uniform float uDepthDynamic;
+    uniform float uDepthShiftPhase;
     uniform sampler2D uTex;
     uniform float uUseTex;
     uniform float uTexMapMode;
@@ -231,6 +244,30 @@
     varying vec2 vUv;
 
     void main() {
+      if (uDepthMode > 0.5) {
+        float radialDepth = distance(vWorldPos, uDepthOrigin);
+        float baseDepth01 = clamp(
+          radialDepth / max(0.0001, uDepthMaxDistance),
+          0.0,
+          1.0
+        );
+        float depth01 = baseDepth01;
+        if (uDepthDynamic > 0.5) {
+          float centerLock = smoothstep(0.015, 0.08, baseDepth01);
+          float outerFalloff = 1.0 - smoothstep(0.72, 1.0, baseDepth01);
+          float travelWave =
+            sin(6.2831853 * (baseDepth01 * 0.95 - uDepthShiftPhase)) * 0.12 +
+            sin(6.2831853 * (baseDepth01 * 1.9 - uDepthShiftPhase * 1.35)) * 0.035;
+          depth01 = clamp(
+            baseDepth01 + travelWave * centerLock * outerFalloff,
+            0.0,
+            1.0
+          );
+        }
+        depth01 = mix(0.08, 0.92, depth01);
+        gl_FragColor = vec4(vec3(depth01), 1.0);
+        return;
+      }
       if (uUseTex > 0.5) {
         vec2 screenUv = vec2(
           gl_FragCoord.x / max(1.0, uCanvasSize.x),
@@ -295,7 +332,9 @@
 
   function applyMode4Ease01(value) {
     const t = clamp(value, 0, 1);
-    const eased = easeInOutSine01(t);
+    const easedSoft = easeInOutSine01(t);
+    const easedStrong = easeInOutStrong01(t);
+    const eased = easedSoft + (easedStrong - easedSoft) * 0.72;
     return t + (eased - t) * playMode4.easeAmount;
   }
 
@@ -305,6 +344,18 @@
     if (t >= rampPhase) return t;
     const rampPhaseSq = rampPhase * rampPhase;
     return (t * t * (2 * rampPhase - t)) / Math.max(0.000001, rampPhaseSq);
+  }
+
+  function computeMode4SizeBlend01(value) {
+    const t = clamp(value, 0, 1);
+    const returnPhase = 0.75;
+    if (t <= 0.5) {
+      return smootherStep01(t / 0.5);
+    }
+    if (t <= returnPhase) {
+      return 1 - smootherStep01((t - 0.5) / Math.max(0.0001, returnPhase - 0.5));
+    }
+    return 0;
   }
 
   function easeInOutStrong01(value) {
@@ -504,6 +555,68 @@
   );
   gl.useProgram(program);
 
+  const postVertexSource = `
+    attribute vec2 aPosition;
+    varying vec2 vUv;
+
+    void main() {
+      vUv = aPosition * 0.5 + 0.5;
+      gl_Position = vec4(aPosition, 0.0, 1.0);
+    }
+  `;
+
+  const postFragmentSource = `
+    precision mediump float;
+
+    uniform sampler2D uSceneTex;
+    uniform vec2 uTexelSize;
+    uniform vec2 uBlurCenterUv;
+    uniform float uBlurEnabled;
+
+    varying vec2 vUv;
+
+    vec4 sampleScene(vec2 uv) {
+      return texture2D(uSceneTex, clamp(uv, 0.0, 1.0));
+    }
+
+    void main() {
+      if (uBlurEnabled < 0.5) {
+        gl_FragColor = sampleScene(vUv);
+        return;
+      }
+
+      float distToCenter = distance(vUv, uBlurCenterUv);
+      float blurMix = smoothstep(0.06, 0.88, distToCenter);
+      vec2 blurStep = uTexelSize * (2.0 + blurMix * 40.0);
+
+      vec4 color = sampleScene(vUv) * 0.08;
+      color += sampleScene(vUv + vec2( blurStep.x, 0.0)) * 0.09;
+      color += sampleScene(vUv + vec2(-blurStep.x, 0.0)) * 0.09;
+      color += sampleScene(vUv + vec2(0.0,  blurStep.y)) * 0.09;
+      color += sampleScene(vUv + vec2(0.0, -blurStep.y)) * 0.09;
+      color += sampleScene(vUv + vec2( blurStep.x,  blurStep.y)) * 0.07;
+      color += sampleScene(vUv + vec2(-blurStep.x,  blurStep.y)) * 0.07;
+      color += sampleScene(vUv + vec2( blurStep.x, -blurStep.y)) * 0.07;
+      color += sampleScene(vUv + vec2(-blurStep.x, -blurStep.y)) * 0.07;
+      color += sampleScene(vUv + vec2( blurStep.x * 2.0, 0.0)) * 0.055;
+      color += sampleScene(vUv + vec2(-blurStep.x * 2.0, 0.0)) * 0.055;
+      color += sampleScene(vUv + vec2(0.0,  blurStep.y * 2.0)) * 0.055;
+      color += sampleScene(vUv + vec2(0.0, -blurStep.y * 2.0)) * 0.055;
+      color += sampleScene(vUv + vec2( blurStep.x * 1.6,  blurStep.y * 1.6)) * 0.045;
+      color += sampleScene(vUv + vec2(-blurStep.x * 1.6,  blurStep.y * 1.6)) * 0.045;
+      color += sampleScene(vUv + vec2( blurStep.x * 1.6, -blurStep.y * 1.6)) * 0.045;
+      color += sampleScene(vUv + vec2(-blurStep.x * 1.6, -blurStep.y * 1.6)) * 0.045;
+      color *= 0.892857;
+
+      gl_FragColor = mix(sampleScene(vUv), color, min(1.0, blurMix * 1.18));
+    }
+  `;
+
+  const postProgram = createProgram(
+    compileShader(gl.VERTEX_SHADER, postVertexSource),
+    compileShader(gl.FRAGMENT_SHADER, postFragmentSource),
+  );
+
   const attribPosition = gl.getAttribLocation(program, "aPosition");
   const attribNormal = gl.getAttribLocation(program, "aNormal");
   const attribUv = gl.getAttribLocation(program, "aUv");
@@ -520,11 +633,43 @@
   const uLightDir = gl.getUniformLocation(program, "uLightDir");
   const uEyePos = gl.getUniformLocation(program, "uEyePos");
   const uFlatMode = gl.getUniformLocation(program, "uFlatMode");
+  const uDepthMode = gl.getUniformLocation(program, "uDepthMode");
+  const uDepthOrigin = gl.getUniformLocation(program, "uDepthOrigin");
+  const uDepthMaxDistance = gl.getUniformLocation(program, "uDepthMaxDistance");
+  const uDepthDynamic = gl.getUniformLocation(program, "uDepthDynamic");
+  const uDepthShiftPhase = gl.getUniformLocation(program, "uDepthShiftPhase");
   const uTex = gl.getUniformLocation(program, "uTex");
   const uUseTex = gl.getUniformLocation(program, "uUseTex");
   const uTexMapMode = gl.getUniformLocation(program, "uTexMapMode");
   const uCanvasSize = gl.getUniformLocation(program, "uCanvasSize");
   const uTexSize = gl.getUniformLocation(program, "uTexSize");
+
+  const postAttribPosition = gl.getAttribLocation(postProgram, "aPosition");
+  const postSceneTex = gl.getUniformLocation(postProgram, "uSceneTex");
+  const postTexelSize = gl.getUniformLocation(postProgram, "uTexelSize");
+  const postBlurCenterUv = gl.getUniformLocation(postProgram, "uBlurCenterUv");
+  const postBlurEnabled = gl.getUniformLocation(postProgram, "uBlurEnabled");
+
+  const postQuadBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, postQuadBuffer);
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array([
+      -1, -1,
+       1, -1,
+      -1,  1,
+       1,  1,
+    ]),
+    gl.STATIC_DRAW,
+  );
+
+  const postFx = {
+    framebuffer: gl.createFramebuffer(),
+    colorTexture: gl.createTexture(),
+    depthBuffer: gl.createRenderbuffer(),
+    width: 0,
+    height: 0,
+  };
 
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
@@ -535,6 +680,21 @@
   gl.uniform1f(uFar, 1000.0);
   gl.uniform3f(uLightDir, staticLightDir[0], staticLightDir[1], staticLightDir[2]);
   gl.uniform1f(uFlatMode, 0);
+  if (uDepthMode) {
+    gl.uniform1f(uDepthMode, 0);
+  }
+  if (uDepthOrigin) {
+    gl.uniform3f(uDepthOrigin, 0, 0, 0);
+  }
+  if (uDepthMaxDistance) {
+    gl.uniform1f(uDepthMaxDistance, 5);
+  }
+  if (uDepthDynamic) {
+    gl.uniform1f(uDepthDynamic, 0);
+  }
+  if (uDepthShiftPhase) {
+    gl.uniform1f(uDepthShiftPhase, 0);
+  }
   gl.uniform1i(uTex, 0);
   gl.uniform1f(uUseTex, 0);
   gl.uniform1f(uTexMapMode, 0);
@@ -756,6 +916,158 @@
     };
   }
 
+  function ensurePostFxTargets(width, height) {
+    const safeWidth = Math.max(2, Math.floor(width));
+    const safeHeight = Math.max(2, Math.floor(height));
+    if (
+      postFx.width === safeWidth &&
+      postFx.height === safeHeight
+    ) {
+      return;
+    }
+
+    postFx.width = safeWidth;
+    postFx.height = safeHeight;
+
+    gl.bindTexture(gl.TEXTURE_2D, postFx.colorTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      safeWidth,
+      safeHeight,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      null,
+    );
+
+    gl.bindRenderbuffer(gl.RENDERBUFFER, postFx.depthBuffer);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, safeWidth, safeHeight);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, postFx.framebuffer);
+    gl.framebufferTexture2D(
+      gl.FRAMEBUFFER,
+      gl.COLOR_ATTACHMENT0,
+      gl.TEXTURE_2D,
+      postFx.colorTexture,
+      0,
+    );
+    gl.framebufferRenderbuffer(
+      gl.FRAMEBUFFER,
+      gl.DEPTH_ATTACHMENT,
+      gl.RENDERBUFFER,
+      postFx.depthBuffer,
+    );
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+  }
+
+  function accumulateDepthDistanceRange(localPositions, object, originWorld, vertexStep, stats) {
+    const step = Math.max(1, Math.floor(vertexStep));
+    let vertexIndex = 0;
+    for (let i = 0; i < localPositions.length; i += 3, vertexIndex += 1) {
+      if (vertexIndex % step !== 0) continue;
+      const world = transformToWorld(
+        [localPositions[i], localPositions[i + 1], localPositions[i + 2]],
+        object,
+      );
+      const dx = world[0] - originWorld[0];
+      const dy = world[1] - originWorld[1];
+      const dz = world[2] - originWorld[2];
+      const radialDepth = Math.hypot(dx, dy, dz);
+      if (!Number.isFinite(radialDepth)) continue;
+      stats.max = Math.max(stats.max, radialDepth);
+      stats.count += 1;
+    }
+  }
+
+  function updateDepthModeUniforms(timeMs) {
+    if (!uDepthOrigin || !uDepthMaxDistance) return;
+    const sphereCenterWorld = transformToWorld([0, 0, 0], sphereObject);
+    const stats = {
+      max: -Infinity,
+      count: 0,
+    };
+
+    accumulateDepthDistanceRange(sphereRawMesh.positions, sphereObject, sphereCenterWorld, 1, stats);
+    accumulateDepthDistanceRange(frustumLocalPositions, frustumObject, sphereCenterWorld, 1, stats);
+    accumulateDepthDistanceRange(
+      frustumCapLocalPositions,
+      frustumLargeBaseObject,
+      sphereCenterWorld,
+      1,
+      stats,
+    );
+
+    if (
+      stats.count < 3 ||
+      !Number.isFinite(stats.max)
+    ) {
+      gl.uniform3f(uDepthOrigin, sphereCenterWorld[0], sphereCenterWorld[1], sphereCenterWorld[2]);
+      gl.uniform1f(uDepthMaxDistance, 5);
+      if (uDepthDynamic) {
+        gl.uniform1f(uDepthDynamic, state.depthDynamic ? 1 : 0);
+      }
+      if (uDepthShiftPhase) {
+        const shiftCycles = ((timeMs || 0) * 0.00022) % 1;
+        gl.uniform1f(uDepthShiftPhase, shiftCycles);
+      }
+      return;
+    }
+
+    gl.uniform3f(uDepthOrigin, sphereCenterWorld[0], sphereCenterWorld[1], sphereCenterWorld[2]);
+    gl.uniform1f(uDepthMaxDistance, Math.max(constants.sphereRadiusWorld, stats.max));
+    if (uDepthDynamic) {
+      gl.uniform1f(uDepthDynamic, state.depthDynamic ? 1 : 0);
+    }
+    if (uDepthShiftPhase) {
+      const shiftCycles = ((timeMs || 0) * 0.00022) % 1;
+      gl.uniform1f(uDepthShiftPhase, shiftCycles);
+    }
+  }
+
+  function getDepthBlurCenterUv() {
+    const centerWorld = transformToWorld([0, 0, 0], sphereObject);
+    const centerScreen = projectWorldToScreen(
+      centerWorld,
+      Math.max(2, canvas.width),
+      Math.max(2, canvas.height),
+      state.cameraZ,
+    );
+    if (!centerScreen) {
+      return [0.5, 0.5];
+    }
+    return [
+      clamp(centerScreen.x / Math.max(1, canvas.width), 0, 1),
+      clamp(1 - centerScreen.y / Math.max(1, canvas.height), 0, 1),
+    ];
+  }
+
+  function drawPostFxPass() {
+    ensurePostFxTargets(canvas.width, canvas.height);
+    const blurCenterUv = getDepthBlurCenterUv();
+
+    gl.useProgram(postProgram);
+    gl.bindBuffer(gl.ARRAY_BUFFER, postQuadBuffer);
+    gl.vertexAttribPointer(postAttribPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(postAttribPosition);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, postFx.colorTexture);
+    gl.uniform1i(postSceneTex, 0);
+    gl.uniform2f(postTexelSize, 1 / Math.max(1, canvas.width), 1 / Math.max(1, canvas.height));
+    gl.uniform2f(postBlurCenterUv, blurCenterUv[0], blurCenterUv[1]);
+    gl.uniform1f(postBlurEnabled, state.depthBlur ? 1 : 0);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.useProgram(program);
+  }
+
   function rgb01ToCss(rgb) {
     const r = Math.round(clamp(rgb[0], 0, 1) * 255);
     const g = Math.round(clamp(rgb[1], 0, 1) * 255);
@@ -893,10 +1205,22 @@
 
   function syncModePanels() {
     if (mode4Controls) {
-      mode4Controls.hidden = state.playMode !== "play4";
+      mode4Controls.hidden = state.playMode !== "play5";
     }
     if (mode5Controls) {
-      mode5Controls.hidden = state.playMode !== "play5";
+      mode5Controls.hidden = state.playMode !== "play6";
+    }
+  }
+
+  function syncAppearancePanels() {
+    if (depthControls) {
+      depthControls.hidden = state.shadingMode !== "depth";
+    }
+    if (depthBlurToggle && document.activeElement !== depthBlurToggle) {
+      depthBlurToggle.checked = state.depthBlur;
+    }
+    if (depthDynamicToggle && document.activeElement !== depthDynamicToggle) {
+      depthDynamicToggle.checked = state.depthDynamic;
     }
   }
 
@@ -910,7 +1234,7 @@
     );
     playMode4.expandedLengthSvg = next;
 
-    if (state.playMode === "play4" && playMode4.phase === "hold") {
+    if (state.playMode === "play5" && playMode4.phase === "hold") {
       playMode4.lengthCurrent = playMode4.expandedLengthSvg;
       playMode4.diameterCurrent = playMode4.expandedLengthSvg * playMode4.defaultScaleRatio;
       rebuildFrustumFor(playMode4.lengthCurrent, playMode4.diameterCurrent);
@@ -936,12 +1260,29 @@
     syncMode4MotionInputs();
   }
 
+  function getFixedPlay3DiameterSvg() {
+    return constants.fixedPlay3LengthSvg * playMode4.defaultScaleRatio;
+  }
+
   function updateShadingMode(mode) {
-    state.shadingMode = mode === "flat" ? "flat" : "lit";
+    if (mode === "flat") {
+      state.shadingMode = "flat";
+    } else if (mode === "depth") {
+      state.shadingMode = "depth";
+    } else {
+      state.shadingMode = "lit";
+    }
     gl.uniform1f(uFlatMode, state.shadingMode === "flat" ? 1 : 0);
+    if (uDepthMode) {
+      gl.uniform1f(uDepthMode, state.shadingMode === "depth" ? 1 : 0);
+    }
+    syncAppearancePanels();
   }
 
   function syncDimensionInputs() {
+    const maxLargeDiameterText = constants.maxLargeDiameterSvg.toFixed(4);
+    frustumDiameterRange.max = maxLargeDiameterText;
+    frustumDiameterNumber.max = maxLargeDiameterText;
     frustumLengthRange.value = String(state.frustumLengthSvg);
     frustumLengthNumber.value = state.frustumLengthSvg.toFixed(3);
     frustumDiameterRange.value = String(state.frustumLargeDiameterSvg);
@@ -1068,9 +1409,24 @@
     frame.style.height = `${Math.round(state.frameHeight)}px`;
     frameShell.style.setProperty("--frame-w", `${Math.round(state.frameWidth)}px`);
     frameShell.style.setProperty("--frame-h", `${Math.round(state.frameHeight)}px`);
-    frameWidthInput.value = String(Math.round(state.frameWidth));
-    frameHeightInput.value = String(Math.round(state.frameHeight));
+    if (document.activeElement !== frameWidthInput) {
+      frameWidthInput.value = String(Math.round(state.frameWidth));
+    }
+    if (document.activeElement !== frameHeightInput) {
+      frameHeightInput.value = String(Math.round(state.frameHeight));
+    }
     resizeCanvasToFrame();
+  }
+
+  function updateWorkspaceShellBounds() {
+    if (!frameShell) return;
+    if (window.matchMedia("(max-width: 640px)").matches || !uiPanel) {
+      frameShell.style.setProperty("--workspace-left", "0px");
+      return;
+    }
+    const panelRect = uiPanel.getBoundingClientRect();
+    const workspaceLeft = Math.max(0, Math.round(panelRect.right + 12));
+    frameShell.style.setProperty("--workspace-left", `${workspaceLeft}px`);
   }
 
   function applyFrameBackgroundColor(value) {
@@ -1191,13 +1547,13 @@
     const count = playMode4Images.length;
     if (!mode4ImagesStatus) return;
     if (!count) {
-      mode4ImagesStatus.textContent = "Play mode 4 mask images: none.";
+      mode4ImagesStatus.textContent = "Play mode 5 mask images: none.";
       renderMode4ImagesList();
       return;
     }
     normalizePlayMode4TextureIndex();
     mode4ImagesStatus.textContent =
-      `Play mode 4 mask images: ${count} loaded (current ${playMode4TextureIndex + 1}/${count}).`;
+      `Play mode 5 mask images: ${count} loaded (current ${playMode4TextureIndex + 1}/${count}).`;
     renderMode4ImagesList();
   }
 
@@ -1399,6 +1755,7 @@
     centerEma1Y: 0,
     centerEma2X: 0,
     centerEma2Y: 0,
+    lastShowOlab: false,
   };
 
   function syncMode5CenterModeInput() {
@@ -1414,7 +1771,7 @@
     playMode5.centerMode = normalizeMode5CenterMode(value);
     syncMode5CenterModeInput();
     playMode5.centerFilterReady = false;
-    if (state.playMode === "play5" && playMode5.centerMode !== "full") {
+    if (state.playMode === "play6" && playMode5.centerMode !== "full") {
       stage.pos[0] = 0;
       stage.pos[1] = 0;
     }
@@ -1441,7 +1798,7 @@
   }
 
   function setupPlayYSpin(mode) {
-    const base = mode === "play3" ? 0.84 : 0.96;
+    const base = mode === "play4" ? 0.84 : 0.96;
     playMotion.yBaseSpeed = base;
     playMotion.yFreq1 = randomRange(0.42, 0.9);
     playMotion.yFreq2 = randomRange(0.95, 1.9);
@@ -1502,6 +1859,7 @@
     playMode5.centerEma1Y = 0;
     playMode5.centerEma2X = 0;
     playMode5.centerEma2Y = 0;
+    playMode5.lastShowOlab = false;
     setMode5LabAngle(0);
   }
 
@@ -1516,7 +1874,7 @@
 
   function updateMode5OlabTransform() {
     if (!mode5OlabWrap || !mode5OlabSvg) return;
-    const isVisible = state.playMode === "play5" && playMode5.showOlab;
+    const isVisible = state.playMode === "play6" && playMode5.showOlab;
     if (!isVisible) {
       setMode5OlabVisible(false);
       return;
@@ -1560,7 +1918,7 @@
     const unitScale = sphereDiameterCss / constants.mode5OlabODiameterSvg;
     const widthCss = constants.mode5OlabViewWidthSvg * unitScale;
     const heightCss = constants.mode5OlabViewHeightSvg * unitScale;
-    const isFullCenterMode = state.playMode === "play5" && playMode5.centerMode === "full";
+    const isFullCenterMode = state.playMode === "play6" && playMode5.centerMode === "full";
     const anchorCssX = isFullCenterMode ? rect.width * 0.5 : sphereCenterPx.x / pxScaleX;
     const anchorCssY = isFullCenterMode ? rect.height * 0.5 : sphereCenterPx.y / pxScaleY;
     const anchorSvgX = isFullCenterMode
@@ -1726,9 +2084,12 @@
     const angle = playMode5.baseAngleRad - Math.PI * 2 * eased;
     const starterIsOlab = playMode5.phase === "olab";
     const switchAngleProgress = clamp(playMode5.switchAngleProgress, 0.05, 0.95);
+    const previousShowOlab = playMode5.lastShowOlab;
 
     playMode5.currentAngleRad = angle;
     playMode5.showOlab = eased < switchAngleProgress ? starterIsOlab : !starterIsOlab;
+    const didSwitchVisual = playMode5.showOlab !== previousShowOlab;
+    playMode5.lastShowOlab = playMode5.showOlab;
     stage.rotX = playMode5.fixedXRad;
     stage.rotY = angle;
     stage.rotZ = playMode5.fixedZRad;
@@ -1739,27 +2100,28 @@
     if (playMode5.centerMode === "full") {
       const centerOffset = computeMode5CenterOffsetWorld();
       const alpha = clamp(playMode5.centerFilterAlpha, 0.05, 0.95);
-      if (!playMode5.centerFilterReady) {
+      if (!playMode5.centerFilterReady || didSwitchVisual) {
         playMode5.centerEma1X = centerOffset.x;
         playMode5.centerEma1Y = centerOffset.y;
         playMode5.centerEma2X = centerOffset.x;
         playMode5.centerEma2Y = centerOffset.y;
         playMode5.centerFilterReady = true;
+        posX = Math.abs(centerOffset.x) < playMode5.centerDeadbandWorld ? 0 : centerOffset.x;
+        posY = Math.abs(centerOffset.y) < playMode5.centerDeadbandWorld ? 0 : centerOffset.y;
       } else {
         playMode5.centerEma1X += (centerOffset.x - playMode5.centerEma1X) * alpha;
         playMode5.centerEma1Y += (centerOffset.y - playMode5.centerEma1Y) * alpha;
         playMode5.centerEma2X += (playMode5.centerEma1X - playMode5.centerEma2X) * alpha;
         playMode5.centerEma2Y += (playMode5.centerEma1Y - playMode5.centerEma2Y) * alpha;
+        const maxLead = Math.max(0.0001, playMode5.centerFilterMaxLeadWorld);
+        const filteredX = 2 * playMode5.centerEma1X - playMode5.centerEma2X;
+        const filteredY = 2 * playMode5.centerEma1Y - playMode5.centerEma2Y;
+        const correctedX = clamp(filteredX, centerOffset.x - maxLead, centerOffset.x + maxLead);
+        const correctedY = clamp(filteredY, centerOffset.y - maxLead, centerOffset.y + maxLead);
+
+        posX = Math.abs(correctedX) < playMode5.centerDeadbandWorld ? 0 : correctedX;
+        posY = Math.abs(correctedY) < playMode5.centerDeadbandWorld ? 0 : correctedY;
       }
-
-      const maxLead = Math.max(0.0001, playMode5.centerFilterMaxLeadWorld);
-      const filteredX = 2 * playMode5.centerEma1X - playMode5.centerEma2X;
-      const filteredY = 2 * playMode5.centerEma1Y - playMode5.centerEma2Y;
-      const correctedX = clamp(filteredX, centerOffset.x - maxLead, centerOffset.x + maxLead);
-      const correctedY = clamp(filteredY, centerOffset.y - maxLead, centerOffset.y + maxLead);
-
-      posX = Math.abs(correctedX) < playMode5.centerDeadbandWorld ? 0 : correctedX;
-      posY = Math.abs(correctedY) < playMode5.centerDeadbandWorld ? 0 : correctedY;
       playMode5.centerOffsetX = posX;
       playMode5.centerOffsetY = posY;
     } else {
@@ -1846,12 +2208,10 @@
       nextX = playMode4.fixedXRad;
       nextZ = playMode4.fixedZRad;
 
-      // Continuous "default-biased" curve (no hard plateau):
-      // expanded -> near-default -> default -> near-default -> expanded.
+      // Size returns to the expanded/original state before the spin fully ends:
+      // expanded -> default -> expanded by 3/4 turn -> hold expanded through the final quarter.
       const sizePhase = easedSpin;
-      const centerDistance01 = Math.abs(sizePhase - 0.5) * 2;
-      const biasPower = 3.2;
-      const sizeBlend = 1 - Math.pow(centerDistance01, biasPower);
+      const sizeBlend = computeMode4SizeBlend01(sizePhase);
       nextLength =
         expandedLength + (constants.defaultFrustumLengthSvg - expandedLength) * sizeBlend;
       nextDiameter =
@@ -1990,6 +2350,20 @@
     updateShadingMode(shadingModeSelect.value);
   });
 
+  if (depthBlurToggle) {
+    depthBlurToggle.addEventListener("change", () => {
+      state.depthBlur = depthBlurToggle.checked;
+      syncAppearancePanels();
+    });
+  }
+
+  if (depthDynamicToggle) {
+    depthDynamicToggle.addEventListener("change", () => {
+      state.depthDynamic = depthDynamicToggle.checked;
+      syncAppearancePanels();
+    });
+  }
+
   playModeSelect.addEventListener("change", () => {
     state.playMode = playModeSelect.value;
     syncModePanels();
@@ -2001,7 +2375,7 @@
     const now = performance.now();
     setMode5OlabVisible(false);
     playMode5.showOlab = false;
-    if (state.playMode === "play4") {
+    if (state.playMode === "play5") {
       playMode4.phase = "hold";
       playMode4.phaseStartMs = now;
       playMode4.lengthCurrent = playMode4.expandedLengthSvg;
@@ -2026,7 +2400,7 @@
       rebuildFrustumFor(playMode4.lengthCurrent, playMode4.diameterCurrent);
       return;
     }
-    if (state.playMode === "play5") {
+    if (state.playMode === "play6") {
       resetPlayMode5(now);
       stage.rotX = playMode5.fixedXRad;
       stage.rotY = 0;
@@ -2035,13 +2409,22 @@
       rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
       return;
     }
-    if (state.playMode === "play1" || state.playMode === "play2" || state.playMode === "play3") {
+    if (
+      state.playMode === "play1" ||
+      state.playMode === "play2" ||
+      state.playMode === "play3" ||
+      state.playMode === "play4"
+    ) {
       setupPlayYSpin(state.playMode);
       playMotion.vy = samplePlayYSpinSpeed(now);
     }
-    if (state.playMode === "play1" || state.playMode === "play2") {
+    if (
+      state.playMode === "play1" ||
+      state.playMode === "play2" ||
+      state.playMode === "play3"
+    ) {
       schedulePlayOrbitTargets(now);
-    } else if (state.playMode === "play3") {
+    } else if (state.playMode === "play4") {
       schedulePlayTargets(now);
     }
     if (state.playMode === "play2") {
@@ -2063,6 +2446,10 @@
       return;
     }
     if (state.playMode === "play3") {
+      rebuildFrustumFor(constants.fixedPlay3LengthSvg, getFixedPlay3DiameterSvg());
+      return;
+    }
+    if (state.playMode === "play4") {
       playDims.fitLengthCurrent = state.frustumLengthSvg;
       playDims.fitDiameterCurrent = state.frustumLargeDiameterSvg;
       rebuildFrustumFor(playDims.fitLengthCurrent, playDims.fitDiameterCurrent);
@@ -2177,11 +2564,23 @@
   }
 
   frameWidthInput.addEventListener("input", () => {
-    applyFrameSize(Number(frameWidthInput.value), state.frameHeight);
+    const raw = Number(frameWidthInput.value);
+    if (!Number.isFinite(raw)) return;
+    applyFrameSize(raw, state.frameHeight);
   });
 
   frameHeightInput.addEventListener("input", () => {
-    applyFrameSize(state.frameWidth, Number(frameHeightInput.value));
+    const raw = Number(frameHeightInput.value);
+    if (!Number.isFinite(raw)) return;
+    applyFrameSize(state.frameWidth, raw);
+  });
+
+  frameWidthInput.addEventListener("blur", () => {
+    frameWidthInput.value = String(Math.round(state.frameWidth));
+  });
+
+  frameHeightInput.addEventListener("blur", () => {
+    frameHeightInput.value = String(Math.round(state.frameHeight));
   });
 
   frameImageInput.addEventListener("change", () => {
@@ -2207,8 +2606,8 @@
     const added = await appendPlayMode4Images(files);
     copyStatus.textContent =
       added > 0
-        ? `${added} image${added > 1 ? "s" : ""} added for play mode 4 mask.`
-        : "No valid images were added for play mode 4 mask.";
+        ? `${added} image${added > 1 ? "s" : ""} added for play mode 5 mask.`
+        : "No valid images were added for play mode 5 mask.";
     mode4ImagesInput.value = "";
   });
 
@@ -2222,7 +2621,7 @@
     if (action === "delete") {
       const removed = deletePlayMode4ImageAt(index);
       copyStatus.textContent = removed
-        ? "Image removed from play mode 4 mask."
+        ? "Image removed from play mode 5 mask."
         : "Image remove failed.";
       return;
     }
@@ -2240,7 +2639,7 @@
     if (!file) return;
     const ok = await replacePlayMode4ImageAt(pendingMode4ReplaceIndex, file);
     copyStatus.textContent = ok
-      ? "Image replaced for play mode 4 mask."
+      ? "Image replaced for play mode 5 mask."
       : "Image replace failed.";
     pendingMode4ReplaceIndex = -1;
     mode4ReplaceInput.value = "";
@@ -2248,7 +2647,7 @@
 
   clearMode4ImagesButton.addEventListener("click", () => {
     clearPlayMode4Images();
-    copyStatus.textContent = "Play mode 4 mask images cleared.";
+    copyStatus.textContent = "Play mode 5 mask images cleared.";
   });
 
   window.addEventListener("beforeunload", () => {
@@ -2265,6 +2664,8 @@
       constants.defaultFrustumLargeDiameterSvg / constants.defaultFrustumLengthSvg;
     state.cameraZ = constants.defaultCameraZ;
     state.frameBgColor = constants.defaultFrameBgColor;
+    state.depthBlur = false;
+    state.depthDynamic = false;
 
     stage.pos[0] = 0;
     stage.pos[1] = 0;
@@ -2308,6 +2709,7 @@
     updateShadingMode("lit");
     shapeColorInput.value = constants.defaultColorHex;
     updateShapeColor(constants.defaultColorHex);
+    syncAppearancePanels();
     syncDimensionInputs();
     syncMode4ExpandedLengthInput();
     syncMode4MotionInputs();
@@ -2324,6 +2726,7 @@
   resetButton.addEventListener("click", resetScene);
 
   window.addEventListener("resize", () => {
+    updateWorkspaceShellBounds();
     resizeCanvasToFrame();
   });
 
@@ -2566,11 +2969,14 @@
   setMode5CenterMode(constants.defaultMode5CenterMode);
   setupPlayYSpin("play1");
   schedulePlayDimensionTargets(performance.now());
+  state.depthBlur = false;
+  state.depthDynamic = false;
   shadingModeSelect.value = "lit";
   updateShadingMode("lit");
   mode4ImageModeSelect.value = playMode4.imageMode;
   setMode5OlabVisible(false);
   updateMode4ImagesStatus();
+  syncAppearancePanels();
   syncDimensionInputs();
   syncMode4ExpandedLengthInput();
   syncMode4MotionInputs();
@@ -2578,6 +2984,7 @@
   rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
   updateCameraUniforms();
   applyFrameBackgroundColor(state.frameBgColor);
+  updateWorkspaceShellBounds();
   applyFrameSize(state.frameWidth, state.frameHeight);
   syncZoomInputs();
   updateRotationInputs();
@@ -2587,20 +2994,29 @@
     const dt = Math.min(0.06, Math.max(0.001, (timeMs - lastFrameMs) * 0.001));
     lastFrameMs = timeMs;
 
-    if (state.playMode === "play4") {
+    if (state.playMode === "play5") {
       isDraggingModel = false;
       rotVelX = 0;
       rotVelY = 0;
       rotVelZ = 0;
       applyPlayMode4State(timeMs);
-    } else if (state.playMode === "play5") {
+    } else if (state.playMode === "play6") {
       isDraggingModel = false;
       rotVelX = 0;
       rotVelY = 0;
       rotVelZ = 0;
       applyPlayMode5State(timeMs);
-    } else if (state.playMode === "play1" || state.playMode === "play2" || state.playMode === "play3") {
-      if (state.playMode === "play1" || state.playMode === "play2") {
+    } else if (
+      state.playMode === "play1" ||
+      state.playMode === "play2" ||
+      state.playMode === "play3" ||
+      state.playMode === "play4"
+    ) {
+      if (
+        state.playMode === "play1" ||
+        state.playMode === "play2" ||
+        state.playMode === "play3"
+      ) {
         if (timeMs >= playMotion.nextChangeMs) {
           schedulePlayOrbitTargets(timeMs);
         }
@@ -2676,6 +3092,17 @@
       }
 
       if (state.playMode === "play3") {
+        const fixedPlay3Length = constants.fixedPlay3LengthSvg;
+        const fixedPlay3Diameter = getFixedPlay3DiameterSvg();
+        if (
+          Math.abs(frustumLayout.lengthSvg - fixedPlay3Length) > 0.7 ||
+          Math.abs(frustumLayout.largeDiameterSvg - fixedPlay3Diameter) > 0.7
+        ) {
+          rebuildFrustumFor(fixedPlay3Length, fixedPlay3Diameter);
+        }
+      }
+
+      if (state.playMode === "play4") {
         const fitFactor = computeFrustumFillScale(state.cameraZ);
         const safeFitFactor =
           Number.isFinite(fitFactor) && fitFactor > 0 ? fitFactor : 1;
@@ -2709,10 +3136,10 @@
     frustumLargeBaseObject.rot[1] = 0;
     frustumLargeBaseObject.rot[2] = 0;
     const mode4MaskImage =
-      state.playMode === "play4" && playMode4.baseGreenActive
+      state.playMode === "play5" && playMode4.baseGreenActive
         ? getCurrentPlayMode4Image()
         : null;
-    if (state.playMode === "play4" && playMode4.baseGreenActive && !mode4MaskImage) {
+    if (state.playMode === "play5" && playMode4.baseGreenActive && !mode4MaskImage) {
       frustumLargeBaseObject.color[0] = constants.playMode4BaseGreen[0];
       frustumLargeBaseObject.color[1] = constants.playMode4BaseGreen[1];
       frustumLargeBaseObject.color[2] = constants.playMode4BaseGreen[2];
@@ -2728,7 +3155,8 @@
         state.playMode === "play2" ||
         state.playMode === "play3" ||
         state.playMode === "play4" ||
-        state.playMode === "play5"
+        state.playMode === "play5" ||
+        state.playMode === "play6"
       ) {
         const lx = constants.defaultLightDir[0] + Math.sin(timeMs * 0.00063) * 0.65;
         const ly = constants.defaultLightDir[1] + Math.cos(timeMs * 0.00051) * 0.35;
@@ -2746,19 +3174,30 @@
       }
     }
 
+    const useDepthPostFx = state.shadingMode === "depth";
+    if (useDepthPostFx) {
+      ensurePostFxTargets(canvas.width, canvas.height);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, postFx.framebuffer);
+    } else {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+    gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.uniform3fv(uStagePos, stage.pos);
     gl.uniform3f(uStageRot, stage.rotX, stage.rotY, stage.rotZ);
+    if (useDepthPostFx) {
+      updateDepthModeUniforms(timeMs);
+    }
     updateRotationInputs();
 
     const normalFlatMode = state.shadingMode === "flat" ? 1 : 0;
-    const mode5ShowOlab = state.playMode === "play5" && playMode5.showOlab;
+    const mode5ShowOlab = state.playMode === "play6" && playMode5.showOlab;
     gl.uniform1f(uFlatMode, normalFlatMode);
     if (!mode5ShowOlab) {
       drawObject(sphereObject);
       drawObject(frustumObject);
-      if (state.playMode === "play4" && playMode4.baseGreenActive) {
+      if (state.playMode === "play5" && playMode4.baseGreenActive) {
         gl.uniform1f(uFlatMode, 1);
         if (mode4MaskImage) {
           drawObject(frustumLargeBaseObject, {
@@ -2776,6 +3215,14 @@
       }
     }
     updateMode5OlabTransform();
+
+    if (useDepthPostFx) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.disable(gl.DEPTH_TEST);
+      drawPostFxPass();
+      gl.enable(gl.DEPTH_TEST);
+    }
 
     requestAnimationFrame(render);
   }
