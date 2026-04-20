@@ -413,7 +413,8 @@ body {
   display: block;
 }
 
-#mode5-olab-wrap {
+#mode5-olab-wrap,
+.mode5-olab-wrap {
   position: absolute;
   left: 0;
   top: 0;
@@ -426,11 +427,13 @@ body {
   will-change: transform, left, top, width, height;
 }
 
-#frame.mode5-olab-active #mode5-olab-wrap {
+#frame.mode5-olab-active #mode5-olab-wrap,
+#frame.mode5-olab-active .mode5-olab-wrap {
   display: block;
 }
 
-#mode5-olab-svg {
+#mode5-olab-svg,
+.mode5-olab-svg {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -445,7 +448,8 @@ body {
   will-change: transform;
 }
 
-#mode5-olab-o-svg {
+#mode5-olab-o-svg,
+.mode5-olab-o-svg {
   position: absolute;
   inset: 0;
   width: 100%;

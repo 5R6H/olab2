@@ -26,9 +26,12 @@
   const mode4Controls = document.getElementById("mode4-controls");
   const mode5Controls = document.getElementById("mode5-controls");
   const mode5CenterModeSelect = document.getElementById("mode5-center-mode");
+  const mode5StackToggle = document.getElementById("mode5-stack-toggle");
   const proportionLockInput = document.getElementById("proportion-lock");
   const zoomRange = document.getElementById("zoom-range");
   const zoomNumber = document.getElementById("zoom-number");
+  const perspectiveRange = document.getElementById("perspective-range");
+  const perspectiveNumber = document.getElementById("perspective-number");
   const frameBgColorInput = document.getElementById("frame-bg-color");
   const frameWidthInput = document.getElementById("frame-width-input");
   const frameHeightInput = document.getElementById("frame-height-input");
@@ -65,12 +68,41 @@
     const ns = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(ns, "svg");
     svg.id = "mode5-olab-o-svg";
-    svg.setAttribute("viewBox", "0 0 73 22");
+    svg.setAttribute("class", "mode5-olab-o-svg");
+    svg.setAttribute("viewBox", "0 0 80 22");
     svg.setAttribute("aria-hidden", "true");
     svg.appendChild(clonedOPath);
     mode5OlabWrap.appendChild(svg);
     return svg;
   })();
+
+  const mode5OlabPrimary = {
+    wrap: mode5OlabWrap,
+    svg: mode5OlabSvg,
+    labGroup: mode5OlabLabGroup,
+    oSvg: mode5OlabOSvg,
+    oPath: mode5OlabOPath,
+  };
+
+  const mode5OlabSecondary = (() => {
+    if (!frame || !mode5OlabWrap) return null;
+    const clone = mode5OlabWrap.cloneNode(true);
+    clone.id = "mode5-olab-wrap-secondary";
+    clone.querySelectorAll("[id]").forEach((element) => {
+      element.id = `${element.id}-secondary`;
+    });
+    clone.style.display = "none";
+    frame.appendChild(clone);
+    return {
+      wrap: clone,
+      svg: clone.querySelector(".mode5-olab-svg"),
+      labGroup: clone.querySelector(".mode5-olab-lab"),
+      oSvg: clone.querySelector(".mode5-olab-o-svg"),
+      oPath: clone.querySelector(".mode5-olab-o-svg path"),
+    };
+  })();
+
+  const mode5OlabInstances = [mode5OlabPrimary, mode5OlabSecondary].filter(Boolean);
 
   const gl = canvas.getContext("webgl", { antialias: true, alpha: true });
   if (!gl) {
@@ -80,18 +112,18 @@
   const constants = {
     sphereDiameterSvg: 192.003,
     sphereRadiusWorld: 1.18,
-    defaultFrustumLengthSvg: 476.745,
-    defaultFrustumLargeDiameterSvg: 239.78,
-    defaultFrustumSmallDiameterSvg: 63.5857,
-    gapSvg: 115.2018,
+    defaultFrustumLengthSvg: 476.74419,
+    defaultFrustumLargeDiameterSvg: 186.480417,
+    defaultFrustumSmallDiameterSvg: 126.272344,
+    gapSvg: 153.6024,
     minGapRatio: 0,
     maxGapRatio: 8,
-    minLengthSvg: 476.745,
+    minLengthSvg: 476.74419,
     maxLengthSvg: 10000,
-    minLargeDiameterSvg: 239.78,
+    minLargeDiameterSvg: 186.480417,
     maxLargeDiameterSvg:
-      (239.78 / 476.745) * 10000,
-    minMode4ExpandedLengthSvg: 476.745,
+      (100.37443 / 256.611) * 10000,
+    minMode4ExpandedLengthSvg: 476.74419,
     maxMode4ExpandedLengthSvg: 10000,
     defaultMode4ExpandedLengthSvg: 3500,
     fixedPlay3LengthSvg: 10000,
@@ -113,17 +145,29 @@
     defaultFrameHeight: 800,
     defaultFrameBgColor: "#ffffff",
     defaultColorHex: "#1c1c1c",
+    defaultPerspectiveFovDeg: 38,
+    minPerspectiveFovDeg: 12,
+    maxPerspectiveFovDeg: 90,
     playMode4BaseGreen: [0, 1, 0],
-    mode5OlabViewWidthSvg: 73,
+    mode5OlabViewWidthSvg: 80,
     mode5OlabViewHeightSvg: 22,
     mode5OlabODiameterSvg: 17.494,
     mode5OlabOCenterXSvg: 8.747,
     mode5OlabOCenterYSvg: 12.8291,
+    mode5OlabLabShiftSvg: 5.7,
     defaultMode5CenterMode: "anchor",
     defaultLightDir: [0.45, 0.75, 0.7],
     maxDiameterToLengthRatio: 1 / 1.5,
     playMode2MaxDiameterToLengthRatio: 1 / 2,
+    mode5StackCenterGapRatio:
+      (203.697 - 51.6738) / 103.347,
   };
+
+  mode5OlabInstances.forEach((instance) => {
+    if (instance && instance.labGroup) {
+      instance.labGroup.setAttribute("transform", `translate(${constants.mode5OlabLabShiftSvg} 0)`);
+    }
+  });
 
   const worldPerSvgUnit = (2 * constants.sphereRadiusWorld) / constants.sphereDiameterSvg;
   const svgToWorld = (value) => value * worldPerSvgUnit;
@@ -139,6 +183,7 @@
     lockedRatio:
       constants.defaultFrustumLargeDiameterSvg / constants.defaultFrustumLengthSvg,
     cameraZ: constants.defaultCameraZ,
+    perspectiveFovDeg: constants.defaultPerspectiveFovDeg,
     shadingMode: "lit",
     depthBlur: false,
     depthDynamic: false,
@@ -675,7 +720,7 @@
   gl.depthFunc(gl.LEQUAL);
   gl.disable(gl.CULL_FACE);
 
-  gl.uniform1f(uFovY, (38 * Math.PI) / 180);
+  gl.uniform1f(uFovY, (state.perspectiveFovDeg * Math.PI) / 180);
   gl.uniform1f(uNear, 0.1);
   gl.uniform1f(uFar, 1000.0);
   gl.uniform3f(uLightDir, staticLightDir[0], staticLightDir[1], staticLightDir[2]);
@@ -771,6 +816,60 @@
     gl.drawElements(gl.TRIANGLES, object.mesh.indexCount, gl.UNSIGNED_SHORT, 0);
   }
 
+  function drawShapeGroupAtStageOffset(yOffsetWorld, yRotWorld) {
+    const baseStageX = stage.pos[0];
+    const baseStageY = stage.pos[1];
+    const baseStageZ = stage.pos[2];
+    const baseRotX = stage.rotX;
+    const baseRotY = stage.rotY;
+    const baseRotZ = stage.rotZ;
+    gl.uniform3f(uStagePos, baseStageX, baseStageY + yOffsetWorld, baseStageZ);
+    gl.uniform3f(
+      uStageRot,
+      baseRotX,
+      Number.isFinite(yRotWorld) ? yRotWorld : baseRotY,
+      baseRotZ,
+    );
+    drawObject(sphereObject);
+    drawObject(frustumObject);
+    drawObject(frustumLargeBaseObject);
+    gl.uniform3f(uStagePos, baseStageX, baseStageY, baseStageZ);
+    gl.uniform3f(uStageRot, baseRotX, baseRotY, baseRotZ);
+  }
+
+  function getPerspectiveFovRad() {
+    return (state.perspectiveFovDeg * Math.PI) / 180;
+  }
+
+  function getActiveCameraZ(baseCameraZ) {
+    const safeBaseCameraZ = Number.isFinite(baseCameraZ) ? baseCameraZ : state.cameraZ;
+    const referenceTan = Math.tan((constants.defaultPerspectiveFovDeg * Math.PI / 180) * 0.5);
+    const currentTan = Math.tan(getPerspectiveFovRad() * 0.5);
+    return safeBaseCameraZ * (referenceTan / Math.max(0.0001, currentTan));
+  }
+
+  function syncPerspectiveInputs() {
+    if (perspectiveRange && document.activeElement !== perspectiveRange) {
+      perspectiveRange.value = state.perspectiveFovDeg.toFixed(1);
+    }
+    if (perspectiveNumber && document.activeElement !== perspectiveNumber) {
+      perspectiveNumber.value = state.perspectiveFovDeg.toFixed(1);
+    }
+  }
+
+  function setPerspectiveFov(value) {
+    const raw = Number(value);
+    if (!Number.isFinite(raw)) return;
+    state.perspectiveFovDeg = clamp(
+      raw,
+      constants.minPerspectiveFovDeg,
+      constants.maxPerspectiveFovDeg,
+    );
+    gl.uniform1f(uFovY, getPerspectiveFovRad());
+    updateCameraUniforms();
+    syncPerspectiveInputs();
+  }
+
   function hexToRgb01(hex) {
     const safeHex = String(hex || "#1c1c1c").trim();
     const parsed = /^#?([0-9a-f]{6})$/i.exec(safeHex);
@@ -788,12 +887,15 @@
     sphereObject.color = rgb.slice();
     frustumObject.color = rgb.slice();
     frustumLargeBaseObject.color = rgb.slice();
-    if (mode5OlabSvg) {
-      mode5OlabSvg.style.color = rgb01ToCss(rgb);
-    }
-    if (mode5OlabOSvg) {
-      mode5OlabOSvg.style.color = rgb01ToCss(rgb);
-    }
+    const cssColor = rgb01ToCss(rgb);
+    mode5OlabInstances.forEach((instance) => {
+      if (instance && instance.svg) {
+        instance.svg.style.color = cssColor;
+      }
+      if (instance && instance.oSvg) {
+        instance.oSvg.style.color = cssColor;
+      }
+    });
   }
 
   function rebuildFrustumFor(lengthSvg, largeDiameterSvg) {
@@ -900,9 +1002,10 @@
   }
 
   function projectWorldToScreen(worldVec, width, height, cameraForFit) {
+    const activeCameraZ = getActiveCameraZ(cameraForFit);
     const aspect = width / height;
-    const f = 1 / Math.tan((38 * Math.PI / 180) * 0.5);
-    const viewZ = worldVec[2] - cameraForFit;
+    const f = 1 / Math.tan(getPerspectiveFovRad() * 0.5);
+    const viewZ = worldVec[2] - activeCameraZ;
     const clipW = -viewZ;
     if (clipW <= 0.001) return null;
     const clipX = worldVec[0] * (f / aspect);
@@ -1079,7 +1182,11 @@
     if (state.shadingMode === "flat") return baseColor.slice();
     const N = normalizeVec3(nWorld);
     const L = normalizeVec3([-currentLightDir[0], -currentLightDir[1], -currentLightDir[2]]);
-    const V = normalizeVec3([0 - centerWorld[0], 0 - centerWorld[1], state.cameraZ - centerWorld[2]]);
+    const V = normalizeVec3([
+      0 - centerWorld[0],
+      0 - centerWorld[1],
+      getActiveCameraZ() - centerWorld[2],
+    ]);
     const H = normalizeVec3([L[0] + V[0], L[1] + V[1], L[2] + V[2]]);
     const diffuse = Math.max(0, dot3(N, L));
     const backDiffuse = Math.max(0, dot3(N, [-L[0], -L[1], -L[2]]));
@@ -1098,8 +1205,8 @@
     const width = Math.max(2, canvas.width);
     const height = Math.max(2, canvas.height);
     const aspect = width / height;
-    const f = 1 / Math.tan((38 * Math.PI / 180) * 0.5);
-    const cameraZ = cameraForFit;
+    const f = 1 / Math.tan(getPerspectiveFovRad() * 0.5);
+    const cameraZ = getActiveCameraZ(cameraForFit);
 
     let minX = Infinity;
     let maxX = -Infinity;
@@ -1168,8 +1275,9 @@
   }
 
   function updateCameraUniforms() {
-    gl.uniform1f(uCameraZ, state.cameraZ);
-    gl.uniform3f(uEyePos, 0, 0, state.cameraZ);
+    const activeCameraZ = getActiveCameraZ();
+    gl.uniform1f(uCameraZ, activeCameraZ);
+    gl.uniform3f(uEyePos, 0, 0, activeCameraZ);
   }
 
   function syncZoomInputs() {
@@ -1210,6 +1318,7 @@
     if (mode5Controls) {
       mode5Controls.hidden = state.playMode !== "play6";
     }
+    syncMode5StackToggleInput();
   }
 
   function syncAppearancePanels() {
@@ -1742,6 +1851,7 @@
     currentAngleRad: 0,
     showOlab: false,
     centerMode: constants.defaultMode5CenterMode,
+    stackMode: false,
     fixedXRad: 0,
     fixedZRad: 0,
     labAngleRad: 0,
@@ -1767,6 +1877,13 @@
     }
   }
 
+  function syncMode5StackToggleInput() {
+    if (!mode5StackToggle) return;
+    if (document.activeElement !== mode5StackToggle) {
+      mode5StackToggle.checked = !!playMode5.stackMode;
+    }
+  }
+
   function setMode5CenterMode(value) {
     playMode5.centerMode = normalizeMode5CenterMode(value);
     syncMode5CenterModeInput();
@@ -1775,6 +1892,12 @@
       stage.pos[0] = 0;
       stage.pos[1] = 0;
     }
+  }
+
+  function setMode5StackMode(value) {
+    playMode5.stackMode = Boolean(value);
+    syncMode5StackToggleInput();
+    playMode5.centerFilterReady = false;
   }
 
   function randomRange(min, max) {
@@ -1836,10 +1959,14 @@
     playDims.diameterPhase2 = randomRange(0, Math.PI * 2);
   }
 
-  function setMode5LabAngle(rad) {
-    playMode5.labAngleRad = rad;
-    if (mode5OlabSvg) {
-      mode5OlabSvg.style.transform = `rotateY(${rad}rad)`;
+  function setMode5LabAngle(primaryRad, secondaryRad) {
+    playMode5.labAngleRad = primaryRad;
+    if (mode5OlabPrimary && mode5OlabPrimary.svg) {
+      mode5OlabPrimary.svg.style.transform = `rotateY(${primaryRad}rad)`;
+    }
+    if (mode5OlabSecondary && mode5OlabSecondary.svg) {
+      const resolvedSecondary = Number.isFinite(secondaryRad) ? secondaryRad : primaryRad;
+      mode5OlabSecondary.svg.style.transform = `rotateY(${resolvedSecondary}rad)`;
     }
   }
 
@@ -1850,6 +1977,7 @@
     playMode5.baseAngleRad = 0;
     playMode5.currentAngleRad = 0;
     playMode5.showOlab = false;
+    playMode5.stackMode = false;
     playMode5.fixedXRad = 0;
     playMode5.fixedZRad = 0;
     playMode5.centerOffsetX = 0;
@@ -1860,36 +1988,59 @@
     playMode5.centerEma2X = 0;
     playMode5.centerEma2Y = 0;
     playMode5.lastShowOlab = false;
-    setMode5LabAngle(0);
+    setMode5LabAngle(0, 0);
+  }
+
+  function setMode5OlabInstanceVisible(instance, visible) {
+    if (!instance || !instance.wrap) return;
+    instance.wrap.style.display = visible ? "block" : "none";
+    instance.wrap.setAttribute("aria-hidden", visible ? "false" : "true");
+  }
+
+  function syncMode5OlabFrameState() {
+    if (!frame) return;
+    const anyVisible = mode5OlabInstances.some(
+      (instance) => instance && instance.wrap && instance.wrap.style.display !== "none",
+    );
+    frame.classList.toggle("mode5-olab-active", anyVisible);
   }
 
   function setMode5OlabVisible(visible) {
-    if (!frame || !mode5OlabWrap) return;
-    if (visible) {
-      frame.classList.add("mode5-olab-active");
-    } else {
-      frame.classList.remove("mode5-olab-active");
+    setMode5OlabInstanceVisible(mode5OlabPrimary, visible);
+    if (mode5OlabSecondary) {
+      setMode5OlabInstanceVisible(mode5OlabSecondary, false);
     }
+    syncMode5OlabFrameState();
   }
 
-  function updateMode5OlabTransform() {
-    if (!mode5OlabWrap || !mode5OlabSvg) return;
-    const isVisible = state.playMode === "play6" && playMode5.showOlab;
-    if (!isVisible) {
-      setMode5OlabVisible(false);
-      return;
-    }
+  function getMode5StackHalfOffsetCssFromSphereDiameter(sphereDiameterCss) {
+    return sphereDiameterCss * constants.mode5StackCenterGapRatio * 0.5;
+  }
 
-    const rect = frame.getBoundingClientRect();
-    if (rect.width < 2 || rect.height < 2) {
-      setMode5OlabVisible(false);
-      return;
+  function getMode5StackHalfOffsetWorld(rect, sphereDiameterCss) {
+    const safeRect = rect || frame.getBoundingClientRect();
+    const cssOffset = getMode5StackHalfOffsetCssFromSphereDiameter(sphereDiameterCss);
+    const sphereCenterWorld = transformToWorld([0, 0, 0], sphereObject);
+    const sphereCenterScreen = projectWorldToScreen(
+      sphereCenterWorld,
+      Math.max(2, canvas.width),
+      Math.max(2, canvas.height),
+      state.cameraZ,
+    );
+    if (!sphereCenterScreen) {
+      return 0;
     }
+    const depth = Math.max(0.25, sphereCenterScreen.depth);
+    const height = Math.max(2, canvas.height);
+    const f = 1 / Math.tan(getPerspectiveFovRad() * 0.5);
+    const deltaPx = cssOffset * (canvas.height / Math.max(1, safeRect.height));
+    const worldPerPixelY = (2 * depth) / (height * f);
+    return deltaPx * worldPerPixelY;
+  }
 
+  function getMode5SphereScreenMetrics(rect) {
     const pxScaleX = canvas.width / Math.max(1, rect.width);
     const pxScaleY = canvas.height / Math.max(1, rect.height);
-    const pixelToCss = 1 / Math.max(0.0001, (pxScaleX + pxScaleY) * 0.5);
-
     const sphereCenterWorld = transformToWorld([0, 0, 0], sphereObject);
     const sphereEdgeWorld = transformToWorld([0, constants.sphereRadiusWorld, 0], sphereObject);
     const sphereCenterPx = projectWorldToScreen(
@@ -1904,9 +2055,51 @@
       canvas.height,
       state.cameraZ,
     );
+    if (!sphereCenterPx || !sphereEdgePx) {
+      return null;
+    }
+    const sphereRadiusPx = Math.hypot(
+      sphereEdgePx.x - sphereCenterPx.x,
+      sphereEdgePx.y - sphereCenterPx.y,
+    );
+    const pixelToCss = 1 / Math.max(0.0001, (pxScaleX + pxScaleY) * 0.5);
+    const sphereDiameterCss = sphereRadiusPx * 2 * pixelToCss;
+    return {
+      pxScaleX,
+      pxScaleY,
+      sphereCenterWorld,
+      sphereEdgeWorld,
+      sphereCenterPx,
+      sphereEdgePx,
+      sphereDiameterCss,
+    };
+  }
+
+  function updateMode5OlabInstanceTransform(instance, rect, metrics) {
+    if (!instance || !instance.wrap || !instance.svg) return;
+    const {
+      pxScaleX,
+      pxScaleY,
+      sphereCenterWorld,
+      sphereEdgeWorld,
+      verticalOffsetCss,
+      isFullCenterMode,
+    } = metrics;
+    const sphereCenterPx = projectWorldToScreen(
+      sphereCenterWorld,
+      canvas.width,
+      canvas.height,
+      state.cameraZ,
+    );
+    const sphereEdgePx = projectWorldToScreen(
+      sphereEdgeWorld,
+      canvas.width,
+      canvas.height,
+      state.cameraZ,
+    );
 
     if (!sphereCenterPx || !sphereEdgePx) {
-      setMode5OlabVisible(false);
+      setMode5OlabInstanceVisible(instance, false);
       return;
     }
 
@@ -1914,13 +2107,15 @@
       sphereEdgePx.x - sphereCenterPx.x,
       sphereEdgePx.y - sphereCenterPx.y,
     );
+    const pixelToCss = 1 / Math.max(0.0001, (pxScaleX + pxScaleY) * 0.5);
     const sphereDiameterCss = sphereRadiusPx * 2 * pixelToCss;
     const unitScale = sphereDiameterCss / constants.mode5OlabODiameterSvg;
     const widthCss = constants.mode5OlabViewWidthSvg * unitScale;
     const heightCss = constants.mode5OlabViewHeightSvg * unitScale;
-    const isFullCenterMode = state.playMode === "play6" && playMode5.centerMode === "full";
     const anchorCssX = isFullCenterMode ? rect.width * 0.5 : sphereCenterPx.x / pxScaleX;
-    const anchorCssY = isFullCenterMode ? rect.height * 0.5 : sphereCenterPx.y / pxScaleY;
+    const anchorCssY = isFullCenterMode
+      ? rect.height * 0.5 + verticalOffsetCss
+      : sphereCenterPx.y / pxScaleY + verticalOffsetCss;
     const anchorSvgX = isFullCenterMode
       ? constants.mode5OlabViewWidthSvg * 0.5
       : constants.mode5OlabOCenterXSvg;
@@ -1932,54 +2127,120 @@
     const olabCenterX = constants.mode5OlabOCenterXSvg * unitScale;
     const olabCenterY = constants.mode5OlabOCenterYSvg * unitScale;
 
-    mode5OlabWrap.style.left = `${anchorCssX - olabAnchorX}px`;
-    mode5OlabWrap.style.top = `${anchorCssY - olabAnchorY}px`;
-    mode5OlabWrap.style.width = `${widthCss}px`;
-    mode5OlabWrap.style.height = `${heightCss}px`;
-    mode5OlabWrap.style.transformOrigin = `${olabCenterX}px ${olabCenterY}px`;
-    mode5OlabWrap.style.transform = "none";
-    setMode5OlabVisible(true);
+    instance.wrap.style.left = `${anchorCssX - olabAnchorX}px`;
+    instance.wrap.style.top = `${anchorCssY - olabAnchorY}px`;
+    instance.wrap.style.width = `${widthCss}px`;
+    instance.wrap.style.height = `${heightCss}px`;
+    instance.wrap.style.transformOrigin = `${olabCenterX}px ${olabCenterY}px`;
+    instance.wrap.style.transform = "none";
+    setMode5OlabInstanceVisible(instance, true);
 
-    if (isFullCenterMode) {
-      const labRect = mode5OlabLabGroup ? mode5OlabLabGroup.getBoundingClientRect() : null;
-      const oRect = mode5OlabOPath ? mode5OlabOPath.getBoundingClientRect() : null;
-      const hasLabRect =
-        labRect &&
-        Number.isFinite(labRect.left) &&
-        Number.isFinite(labRect.top) &&
-        labRect.width > 0 &&
-        labRect.height > 0;
-      const hasORect =
-        oRect &&
-        Number.isFinite(oRect.left) &&
-        Number.isFinite(oRect.top) &&
-        oRect.width > 0 &&
-        oRect.height > 0;
-      if (hasLabRect || hasORect) {
-        let minX = hasLabRect ? labRect.left : oRect.left;
-        let maxX = hasLabRect ? labRect.right : oRect.right;
-        let minY = hasLabRect ? labRect.top : oRect.top;
-        let maxY = hasLabRect ? labRect.bottom : oRect.bottom;
-        if (hasORect) {
-          minX = Math.min(minX, oRect.left);
-          maxX = Math.max(maxX, oRect.right);
-          minY = Math.min(minY, oRect.top);
-          maxY = Math.max(maxY, oRect.bottom);
-        }
-        const currentCenterX = (minX + maxX) * 0.5;
-        const currentCenterY = (minY + maxY) * 0.5;
-        const targetCenterX = rect.left + rect.width * 0.5;
-        const targetCenterY = rect.top + rect.height * 0.5;
-        const deltaX = targetCenterX - currentCenterX;
-        const deltaY = targetCenterY - currentCenterY;
-        if (Math.abs(deltaX) > 0.05 || Math.abs(deltaY) > 0.05) {
-          const left = parseFloat(mode5OlabWrap.style.left) || 0;
-          const top = parseFloat(mode5OlabWrap.style.top) || 0;
-          mode5OlabWrap.style.left = `${left + deltaX}px`;
-          mode5OlabWrap.style.top = `${top + deltaY}px`;
-        }
-      }
+    if (!isFullCenterMode) return;
+
+    const labRect = instance.labGroup ? instance.labGroup.getBoundingClientRect() : null;
+    const oRect = instance.oPath ? instance.oPath.getBoundingClientRect() : null;
+    const hasLabRect =
+      labRect &&
+      Number.isFinite(labRect.left) &&
+      Number.isFinite(labRect.top) &&
+      labRect.width > 0 &&
+      labRect.height > 0;
+    const hasORect =
+      oRect &&
+      Number.isFinite(oRect.left) &&
+      Number.isFinite(oRect.top) &&
+      oRect.width > 0 &&
+      oRect.height > 0;
+    if (!hasLabRect && !hasORect) return;
+
+    let minX = hasLabRect ? labRect.left : oRect.left;
+    let maxX = hasLabRect ? labRect.right : oRect.right;
+    let minY = hasLabRect ? labRect.top : oRect.top;
+    let maxY = hasLabRect ? labRect.bottom : oRect.bottom;
+    if (hasORect) {
+      minX = Math.min(minX, oRect.left);
+      maxX = Math.max(maxX, oRect.right);
+      minY = Math.min(minY, oRect.top);
+      maxY = Math.max(maxY, oRect.bottom);
     }
+    const currentCenterX = (minX + maxX) * 0.5;
+    const currentCenterY = (minY + maxY) * 0.5;
+    const targetCenterX = rect.left + rect.width * 0.5;
+    const targetCenterY = rect.top + rect.height * 0.5 + verticalOffsetCss;
+    const deltaX = targetCenterX - currentCenterX;
+    const deltaY = targetCenterY - currentCenterY;
+    if (Math.abs(deltaX) > 0.05 || Math.abs(deltaY) > 0.05) {
+      const left = parseFloat(instance.wrap.style.left) || 0;
+      const top = parseFloat(instance.wrap.style.top) || 0;
+      instance.wrap.style.left = `${left + deltaX}px`;
+      instance.wrap.style.top = `${top + deltaY}px`;
+    }
+  }
+
+  function updateMode5OlabTransform() {
+    if (!mode5OlabPrimary.wrap || !mode5OlabPrimary.svg) return;
+    const isPlay6 = state.playMode === "play6";
+    const isStackMode = isPlay6 && playMode5.stackMode;
+    const showPrimary = isPlay6 && playMode5.showOlab;
+    const showSecondary = isPlay6 && isStackMode && !playMode5.showOlab;
+    if (!showPrimary && !showSecondary) {
+      setMode5OlabVisible(false);
+      return;
+    }
+
+    const rect = frame.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) {
+      setMode5OlabVisible(false);
+      return;
+    }
+
+    const screenMetrics = getMode5SphereScreenMetrics(rect);
+    if (!screenMetrics) {
+      setMode5OlabVisible(false);
+      return;
+    }
+    const {
+      pxScaleX,
+      pxScaleY,
+      sphereCenterWorld,
+      sphereEdgeWorld,
+      sphereDiameterCss,
+    } = screenMetrics;
+    const stackHalfOffsetCss = isStackMode
+      ? getMode5StackHalfOffsetCssFromSphereDiameter(sphereDiameterCss)
+      : 0;
+    const stackHalfOffsetWorld = isStackMode
+      ? getMode5StackHalfOffsetWorld(rect, sphereDiameterCss)
+      : 0;
+    const isFullCenterMode = isPlay6 && playMode5.centerMode === "full";
+
+    if (showPrimary) {
+      updateMode5OlabInstanceTransform(mode5OlabPrimary, rect, {
+        pxScaleX,
+        pxScaleY,
+        sphereCenterWorld,
+        sphereEdgeWorld,
+        verticalOffsetCss: isStackMode ? -stackHalfOffsetCss : 0,
+        isFullCenterMode,
+      });
+    } else {
+      setMode5OlabInstanceVisible(mode5OlabPrimary, false);
+    }
+
+    if (showSecondary && mode5OlabSecondary) {
+      updateMode5OlabInstanceTransform(mode5OlabSecondary, rect, {
+        pxScaleX,
+        pxScaleY,
+        sphereCenterWorld,
+        sphereEdgeWorld,
+        verticalOffsetCss: stackHalfOffsetCss,
+        isFullCenterMode,
+      });
+    } else if (mode5OlabSecondary) {
+      setMode5OlabInstanceVisible(mode5OlabSecondary, false);
+    }
+
+    syncMode5OlabFrameState();
   }
 
   function accumulateProjectedStats(localPositions, object, width, height, cameraForFit, vertexStep, stats) {
@@ -2061,7 +2322,7 @@
 
     const depth = Math.max(0.25, stats.depthSum / Math.max(1, stats.count));
     const aspect = width / height;
-    const f = 1 / Math.tan((38 * Math.PI / 180) * 0.5);
+    const f = 1 / Math.tan(getPerspectiveFovRad() * 0.5);
     const worldPerPixelX = (2 * depth * aspect) / (width * f);
     const worldPerPixelY = (2 * depth) / (height * f);
     return {
@@ -2131,7 +2392,7 @@
     }
     stage.pos[0] = posX;
     stage.pos[1] = posY;
-    setMode5LabAngle(angle);
+    setMode5LabAngle(angle, playMode5.stackMode ? -angle : angle);
   }
 
   function applyPlayMode4State(timeMs) {
@@ -2364,6 +2625,12 @@
     });
   }
 
+  if (mode5StackToggle) {
+    mode5StackToggle.addEventListener("change", () => {
+      setMode5StackMode(mode5StackToggle.checked);
+    });
+  }
+
   playModeSelect.addEventListener("change", () => {
     state.playMode = playModeSelect.value;
     syncModePanels();
@@ -2406,6 +2673,7 @@
       stage.rotY = 0;
       stage.rotZ = playMode5.fixedZRad;
       setMode5CenterMode(mode5CenterModeSelect ? mode5CenterModeSelect.value : playMode5.centerMode);
+      setMode5StackMode(mode5StackToggle ? mode5StackToggle.checked : false);
       rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
       return;
     }
@@ -2517,6 +2785,21 @@
   zoomNumber.addEventListener("blur", () => {
     zoomNumber.value = state.cameraZ.toFixed(1);
   });
+
+  if (perspectiveRange) {
+    perspectiveRange.addEventListener("input", () => {
+      setPerspectiveFov(perspectiveRange.value);
+    });
+  }
+
+  if (perspectiveNumber) {
+    perspectiveNumber.addEventListener("input", () => {
+      setPerspectiveFov(perspectiveNumber.value);
+    });
+    perspectiveNumber.addEventListener("blur", () => {
+      syncPerspectiveInputs();
+    });
+  }
 
   mode4ExpandedLengthInput.addEventListener("input", () => {
     setMode4ExpandedLength(mode4ExpandedLengthInput.value);
@@ -2663,6 +2946,7 @@
     state.lockedRatio =
       constants.defaultFrustumLargeDiameterSvg / constants.defaultFrustumLengthSvg;
     state.cameraZ = constants.defaultCameraZ;
+    state.perspectiveFovDeg = constants.defaultPerspectiveFovDeg;
     state.frameBgColor = constants.defaultFrameBgColor;
     state.depthBlur = false;
     state.depthDynamic = false;
@@ -2702,6 +2986,7 @@
     playMode4.nextZRad = randomMode4TiltZ();
     resetPlayMode5(performance.now());
     setMode5CenterMode(constants.defaultMode5CenterMode);
+    setMode5StackMode(false);
     setMode5OlabVisible(false);
     setupPlayYSpin("play1");
     schedulePlayDimensionTargets(performance.now());
@@ -2711,6 +2996,7 @@
     updateShapeColor(constants.defaultColorHex);
     syncAppearancePanels();
     syncDimensionInputs();
+    syncPerspectiveInputs();
     syncMode4ExpandedLengthInput();
     syncMode4MotionInputs();
     syncModePanels();
@@ -2967,11 +3253,15 @@
   playMode4.imageMode = constants.defaultMode4ImageMode;
   resetPlayMode5(performance.now());
   setMode5CenterMode(constants.defaultMode5CenterMode);
+  setMode5StackMode(false);
   setupPlayYSpin("play1");
   schedulePlayDimensionTargets(performance.now());
   state.depthBlur = false;
   state.depthDynamic = false;
+  state.perspectiveFovDeg = constants.defaultPerspectiveFovDeg;
   shadingModeSelect.value = "lit";
+  syncPerspectiveInputs();
+  gl.uniform1f(uFovY, getPerspectiveFovRad());
   updateShadingMode("lit");
   mode4ImageModeSelect.value = playMode4.imageMode;
   setMode5OlabVisible(false);
@@ -3193,8 +3483,22 @@
 
     const normalFlatMode = state.shadingMode === "flat" ? 1 : 0;
     const mode5ShowOlab = state.playMode === "play6" && playMode5.showOlab;
+    const mode5StackMode = state.playMode === "play6" && playMode5.stackMode;
+    const mode5TopAngle = playMode5.currentAngleRad;
+    const mode5BottomAngle = mode5StackMode ? -playMode5.currentAngleRad : playMode5.currentAngleRad;
     gl.uniform1f(uFlatMode, normalFlatMode);
-    if (!mode5ShowOlab) {
+    if (mode5StackMode) {
+      const rect = frame.getBoundingClientRect();
+      const screenMetrics = rect.width > 1 && rect.height > 1 ? getMode5SphereScreenMetrics(rect) : null;
+      const stackHalfOffsetWorld = screenMetrics
+        ? getMode5StackHalfOffsetWorld(rect, screenMetrics.sphereDiameterCss)
+        : 0;
+      if (!mode5ShowOlab) {
+        drawShapeGroupAtStageOffset(stackHalfOffsetWorld, mode5TopAngle);
+      } else {
+        drawShapeGroupAtStageOffset(-stackHalfOffsetWorld, mode5BottomAngle);
+      }
+    } else if (!mode5ShowOlab) {
       drawObject(sphereObject);
       drawObject(frustumObject);
       if (state.playMode === "play5" && playMode4.baseGreenActive) {
