@@ -69,7 +69,7 @@
     const svg = document.createElementNS(ns, "svg");
     svg.id = "mode5-olab-o-svg";
     svg.setAttribute("class", "mode5-olab-o-svg");
-    svg.setAttribute("viewBox", "0 0 80 22");
+    svg.setAttribute("viewBox", "0 0 155 47");
     svg.setAttribute("aria-hidden", "true");
     svg.appendChild(clonedOPath);
     mode5OlabWrap.appendChild(svg);
@@ -112,18 +112,17 @@
   const constants = {
     sphereDiameterSvg: 192.003,
     sphereRadiusWorld: 1.18,
-    defaultFrustumLengthSvg: 476.74419,
-    defaultFrustumLargeDiameterSvg: 186.480417,
-    defaultFrustumSmallDiameterSvg: 126.272344,
-    gapSvg: 153.6024,
+    defaultFrustumLengthSvg: 489.493138,
+    defaultFrustumLargeDiameterSvg: 160.829039,
+    defaultFrustumSmallDiameterSvg: 91.446885,
+    gapSvg: 103.529133,
     minGapRatio: 0,
     maxGapRatio: 8,
-    minLengthSvg: 476.74419,
+    minLengthSvg: 489.493138,
     maxLengthSvg: 10000,
-    minLargeDiameterSvg: 186.480417,
-    maxLargeDiameterSvg:
-      (100.37443 / 256.611) * 10000,
-    minMode4ExpandedLengthSvg: 476.74419,
+    minLargeDiameterSvg: 160.829039,
+    maxLargeDiameterSvg: 3285.623973,
+    minMode4ExpandedLengthSvg: 489.493138,
     maxMode4ExpandedLengthSvg: 10000,
     defaultMode4ExpandedLengthSvg: 3500,
     fixedPlay3LengthSvg: 10000,
@@ -147,14 +146,15 @@
     defaultColorHex: "#1c1c1c",
     defaultPerspectiveFovDeg: 38,
     minPerspectiveFovDeg: 12,
-    maxPerspectiveFovDeg: 90,
+    maxPerspectiveFovDeg: 200,
+    maxPerspectiveEffectiveFovDeg: 170,
     playMode4BaseGreen: [0, 1, 0],
-    mode5OlabViewWidthSvg: 80,
-    mode5OlabViewHeightSvg: 22,
-    mode5OlabODiameterSvg: 17.494,
-    mode5OlabOCenterXSvg: 8.747,
-    mode5OlabOCenterYSvg: 12.8291,
-    mode5OlabLabShiftSvg: 5.7,
+    mode5OlabViewWidthSvg: 155,
+    mode5OlabViewHeightSvg: 47,
+    mode5OlabODiameterSvg: 37.9085,
+    mode5OlabOCenterXSvg: 18.95425,
+    mode5OlabOCenterYSvg: 27.587105,
+    mode5OlabLabShiftSvg: 0,
     defaultMode5CenterMode: "anchor",
     defaultLightDir: [0.45, 0.75, 0.7],
     maxDiameterToLengthRatio: 1 / 1.5,
@@ -720,7 +720,7 @@
   gl.depthFunc(gl.LEQUAL);
   gl.disable(gl.CULL_FACE);
 
-  gl.uniform1f(uFovY, (state.perspectiveFovDeg * Math.PI) / 180);
+  gl.uniform1f(uFovY, getPerspectiveFovRad());
   gl.uniform1f(uNear, 0.1);
   gl.uniform1f(uFar, 1000.0);
   gl.uniform3f(uLightDir, staticLightDir[0], staticLightDir[1], staticLightDir[2]);
@@ -837,13 +837,27 @@
     gl.uniform3f(uStageRot, baseRotX, baseRotY, baseRotZ);
   }
 
+  function getEffectivePerspectiveFovDeg(rawValue = state.perspectiveFovDeg) {
+    const safeRaw = clamp(
+      Number.isFinite(rawValue) ? rawValue : constants.defaultPerspectiveFovDeg,
+      constants.minPerspectiveFovDeg,
+      constants.maxPerspectiveFovDeg,
+    );
+    if (safeRaw <= 90) return safeRaw;
+    const t = (safeRaw - 90) / Math.max(0.0001, constants.maxPerspectiveFovDeg - 90);
+    const eased = 1 - Math.pow(1 - t, 1.65);
+    return 90 + (constants.maxPerspectiveEffectiveFovDeg - 90) * eased;
+  }
+
   function getPerspectiveFovRad() {
-    return (state.perspectiveFovDeg * Math.PI) / 180;
+    return (getEffectivePerspectiveFovDeg() * Math.PI) / 180;
   }
 
   function getActiveCameraZ(baseCameraZ) {
     const safeBaseCameraZ = Number.isFinite(baseCameraZ) ? baseCameraZ : state.cameraZ;
-    const referenceTan = Math.tan((constants.defaultPerspectiveFovDeg * Math.PI / 180) * 0.5);
+    const referenceTan = Math.tan(
+      (getEffectivePerspectiveFovDeg(constants.defaultPerspectiveFovDeg) * Math.PI / 180) * 0.5,
+    );
     const currentTan = Math.tan(getPerspectiveFovRad() * 0.5);
     return safeBaseCameraZ * (referenceTan / Math.max(0.0001, currentTan));
   }
@@ -1016,6 +1030,32 @@
       x: (ndcX * 0.5 + 0.5) * width,
       y: (1 - (ndcY * 0.5 + 0.5)) * height,
       depth: clipW,
+    };
+  }
+
+  function getModelPanWorldPerCssPixel() {
+    const rect = frame.getBoundingClientRect();
+    const width = Math.max(2, canvas.width);
+    const height = Math.max(2, canvas.height);
+    const sphereCenterWorld = transformToWorld([0, 0, 0], sphereObject);
+    const sphereCenterScreen = projectWorldToScreen(
+      sphereCenterWorld,
+      width,
+      height,
+      state.cameraZ,
+    );
+    const depth = sphereCenterScreen
+      ? Math.max(0.25, sphereCenterScreen.depth)
+      : Math.max(0.25, getActiveCameraZ() - sphereCenterWorld[2]);
+    const aspect = width / height;
+    const f = 1 / Math.tan(getPerspectiveFovRad() * 0.5);
+    const cssToCanvasX = width / Math.max(1, rect.width);
+    const cssToCanvasY = height / Math.max(1, rect.height);
+    const worldPerCanvasPixelX = (2 * depth * aspect) / (width * f);
+    const worldPerCanvasPixelY = (2 * depth) / (height * f);
+    return {
+      x: worldPerCanvasPixelX * cssToCanvasX,
+      y: worldPerCanvasPixelY * cssToCanvasY,
     };
   }
 
@@ -1778,6 +1818,7 @@
   }
 
   let isDraggingModel = false;
+  let dragModelMode = "rotate";
   let prevPointerX = 0;
   let prevPointerY = 0;
   let rotVelX = 0;
@@ -2521,9 +2562,17 @@
 
   canvas.addEventListener("pointerdown", (event) => {
     if (state.playMode !== "off") return;
+    if (event.button !== 0 && event.button !== 2) return;
     isDraggingModel = true;
+    dragModelMode = event.button === 2 ? "pan" : "rotate";
     prevPointerX = event.clientX;
     prevPointerY = event.clientY;
+    if (dragModelMode === "pan") {
+      rotVelX = 0;
+      rotVelY = 0;
+      rotVelZ = 0;
+      event.preventDefault();
+    }
     canvas.setPointerCapture(event.pointerId);
   });
 
@@ -2533,6 +2582,16 @@
     const dy = event.clientY - prevPointerY;
     prevPointerX = event.clientX;
     prevPointerY = event.clientY;
+    if (dragModelMode === "pan") {
+      const worldPerCssPixel = getModelPanWorldPerCssPixel();
+      stage.pos[0] += dx * worldPerCssPixel.x;
+      stage.pos[1] -= dy * worldPerCssPixel.y;
+      rotVelX = 0;
+      rotVelY = 0;
+      rotVelZ = 0;
+      event.preventDefault();
+      return;
+    }
     stage.rotY += dx * 0.012;
     stage.rotX += dy * 0.012;
     stage.rotZ += (dx - dy) * 0.0025;
@@ -2544,6 +2603,7 @@
   canvas.addEventListener("pointerup", (event) => {
     if (!isDraggingModel) return;
     isDraggingModel = false;
+    dragModelMode = "rotate";
     if (canvas.hasPointerCapture(event.pointerId)) {
       canvas.releasePointerCapture(event.pointerId);
     }
@@ -2551,6 +2611,12 @@
 
   canvas.addEventListener("pointercancel", () => {
     isDraggingModel = false;
+    dragModelMode = "rotate";
+  });
+
+  canvas.addEventListener("contextmenu", (event) => {
+    if (state.playMode !== "off") return;
+    event.preventDefault();
   });
 
   canvas.addEventListener(
@@ -2634,6 +2700,8 @@
   playModeSelect.addEventListener("change", () => {
     state.playMode = playModeSelect.value;
     syncModePanels();
+    isDraggingModel = false;
+    dragModelMode = "rotate";
     rotVelX = 0;
     rotVelY = 0;
     rotVelZ = 0;
@@ -3286,12 +3354,14 @@
 
     if (state.playMode === "play5") {
       isDraggingModel = false;
+      dragModelMode = "rotate";
       rotVelX = 0;
       rotVelY = 0;
       rotVelZ = 0;
       applyPlayMode4State(timeMs);
     } else if (state.playMode === "play6") {
       isDraggingModel = false;
+      dragModelMode = "rotate";
       rotVelX = 0;
       rotVelY = 0;
       rotVelZ = 0;
@@ -3322,6 +3392,7 @@
       stage.rotZ += playMotion.vz * dt;
       stage.pos[1] = 0;
       isDraggingModel = false;
+      dragModelMode = "rotate";
       rotVelX = 0;
       rotVelY = 0;
 

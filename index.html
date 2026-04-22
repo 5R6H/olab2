@@ -43,20 +43,20 @@
         <h2 class="group-title">Geometry</h2>
         <label class="field">
           <span>Frustum length</span>
-          <input id="frustum-length-range" type="range" min="476.74419" max="10000" step="0.1" value="476.74419" />
-          <input id="frustum-length-number" type="number" min="476.74419" max="10000" step="0.1" value="476.74419" />
+          <input id="frustum-length-range" type="range" min="489.493138" max="10000" step="0.1" value="489.493138" />
+          <input id="frustum-length-number" type="number" min="489.493138" max="10000" step="0.1" value="489.493138" />
         </label>
 
         <label class="field">
           <span>Large base diameter</span>
-          <input id="frustum-diameter-range" type="range" min="186.480417" max="3911.5404" step="0.1" value="186.480417" />
-          <input id="frustum-diameter-number" type="number" min="186.480417" max="3911.5404" step="0.1" value="186.480417" />
+          <input id="frustum-diameter-range" type="range" min="160.829039" max="3285.6240" step="0.1" value="160.829039" />
+          <input id="frustum-diameter-number" type="number" min="160.829039" max="3285.6240" step="0.1" value="160.829039" />
         </label>
 
         <label class="field">
           <span>Gap (x sphere diameter)</span>
-          <input id="gap-range" type="range" min="0" max="8" step="0.1" value="0.8" />
-          <input id="gap-number" type="number" min="0" max="8" step="0.1" value="0.8" />
+          <input id="gap-range" type="range" min="0" max="8" step="0.1" value="0.5" />
+          <input id="gap-number" type="number" min="0" max="8" step="0.1" value="0.5" />
         </label>
 
         <label class="toggle">
@@ -75,8 +75,8 @@
 
         <label class="field">
           <span>Perspective</span>
-          <input id="perspective-range" type="range" min="12" max="90" step="0.1" value="38" />
-          <input id="perspective-number" type="number" min="12" max="90" step="0.1" value="38" />
+          <input id="perspective-range" type="range" min="12" max="200" step="0.1" value="38" />
+          <input id="perspective-number" type="number" min="12" max="200" step="0.1" value="38" />
         </label>
 
         <label class="field">
@@ -98,7 +98,7 @@
             <input
               id="mode4-expanded-length-input"
               type="number"
-              min="476.74419"
+              min="489.493138"
               max="10000"
               step="1"
               value="3500"
@@ -195,15 +195,13 @@
       <div id="frame" style="width: 600px; height: 800px">
         <img id="frame-bg-image" alt="" />
         <div id="mode5-olab-wrap" class="mode5-olab-wrap" aria-hidden="true">
-          <svg id="mode5-olab-svg" class="mode5-olab-svg" viewBox="0 0 80 22" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <svg id="mode5-olab-svg" class="mode5-olab-svg" viewBox="0 0 155 47" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <g id="mode5-olab-lab" class="mode5-olab-lab">
-              <path d="M31.8684 17.2825H36.809V21.3852H31.8879C29.622 21.3852 27.7852 19.5483 27.7852 17.2825L27.7853 0H31.8684C31.8684 0 31.8684 1.75118 31.8684 4.10689V17.2825Z" fill="currentColor"/>
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M38.0678 16.2002C38.0678 13.2023 40.5946 10.6946 43.7068 10.7015L52.9518 10.7216L48.9388 18.1887H48.4268C47.6423 20.4899 45.1422 21.5778 43.5659 21.5778L43.2768 21.5708C40.397 21.4253 38.2232 19.3663 38.0749 16.4893L38.0678 16.2002ZM43.7406 17.8218C42.6108 17.8218 41.8243 16.9355 41.8243 15.9541C41.8243 14.9313 42.6635 14.1007 43.6983 14.1031L48.86 14.1125C48.2114 15.8907 45.8177 17.8217 43.7406 17.8218Z" fill="currentColor"/>
-              <path d="M46.61 4.15087C50.1194 4.15104 52.9639 6.99683 52.964 10.5063V17.3004H55.1207V21.3724H52.1187C50.3522 21.3724 48.9203 19.9404 48.9203 18.174L48.9202 10.2718C48.9201 8.99565 47.8859 7.96162 46.6099 7.96145L39.9736 7.96081L39.9751 4.15023L46.61 4.15087Z" fill="currentColor"/>
-              <path d="M60.8377 0.000237605V21.3881H56.7288V0.000237786L60.8377 0.000237605Z" fill="currentColor"/>
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M65.8805 21.5781L65.1454 21.5682C63.6153 21.5682 61.9728 20.5504 61.3251 18.6164H60.8447C59.9213 17.1759 59.3543 15.4538 59.3543 14.0421V11.5138C59.3543 10.0566 59.878 8.42173 60.8305 7.0026H61.3251C61.9698 5.29195 64.1546 4.03519 65.8805 4.03519L66.2276 4.04365C69.7319 4.04365 72.5062 7.35182 72.5066 11.1841V14.407C72.5066 18.3657 69.5163 21.5781 65.8805 21.5781ZM68.4494 11.5204V14.046C68.4494 16.0765 66.7162 17.6153 64.5182 17.6156C62.7065 17.6156 60.9281 16.1694 60.9281 14.046V11.5204C60.9281 9.79871 62.383 8.00312 64.5273 8.00312C66.9593 8.00312 68.4491 9.81217 68.4494 11.5204Z" fill="currentColor"/>
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M67.8354 36.6297H77.8176V46.1561H67.4966C65.9109 46.1561 64.391 45.5224 63.2748 44.3959L60.071 41.1625C58.9683 40.0495 58.3496 38.5461 58.3496 36.9794L58.3496 0H67.8354V36.6297Z" fill="currentColor"/>
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M99.0328 8.7989C106.7 8.79955 112.915 15.0164 112.915 22.6835V36.6675H117.485V46.1289H105.853V36.9833H103.513L100.893 41.4563C99.0394 44.6208 95.647 46.5654 91.9796 46.5654L91.3666 46.5491H91.3544C85.0505 46.2304 80.2625 41.7082 79.9362 35.3866V35.3745L79.9199 34.7614V34.7513C79.92 28.1611 85.4693 22.6663 92.2882 22.6815L97.9005 22.6926L103.513 22.7038V22.1862C103.512 19.7118 101.507 17.7069 99.0328 17.7061L83.9594 17.7041L83.9635 8.79688L99.0328 8.7989ZM92.2679 30.7219C90.3013 30.7177 88.7138 32.2959 88.7135 34.2296C88.7135 36.0873 90.2015 37.7718 92.3592 37.7718C96.7149 37.7714 103.178 31.3239 103.178 31.3239V30.7219H92.2679Z" fill="currentColor"/>
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M129.517 16.9707H131.866L134.06 13.2678C135.791 10.3461 138.94 8.55895 142.336 8.57027C150.042 8.5759 154.988 15.9028 154.988 25.1932V29.8234C154.988 38.9702 150.301 46.5641 142.336 46.5641C138.939 46.5641 135.795 44.7687 134.069 41.8431L131.866 38.1097H129.517V46.1621H119.977V0H129.517V16.9707ZM138.246 17.7921C133.951 17.7926 130.934 22.2185 130.934 25.1932V29.8234C130.934 33.4949 134.609 37.334 138.246 37.3341C142.716 37.3333 145.559 33.3132 145.559 29.8234V25.1932C145.558 22.2654 143.177 17.7921 138.246 17.7921Z" fill="currentColor"/>
             </g>
-            <path d="M8.74707 4.08203C13.5779 4.08203 17.4941 7.99823 17.4941 12.8291C17.494 17.6598 13.5778 21.5762 8.74707 21.5762C3.9163 21.5762 0.000166915 17.6598 0 12.8291C0 7.99823 3.9162 4.08203 8.74707 4.08203ZM8.74512 8.31738C6.25392 8.31738 4.2344 10.3369 4.23438 12.8281C4.23438 15.3193 6.25391 17.3389 8.74512 17.3389C11.2363 17.3388 13.2559 15.3193 13.2559 12.8281C13.2558 10.337 11.2363 8.31745 8.74512 8.31738Z" fill="currentColor"/>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M18.9553 8.63281C29.423 8.63336 37.9085 17.1203 37.9085 27.5881C37.9083 38.0557 29.4228 46.5408 18.9553 46.5414C8.48735 46.5414 0.00026142 38.0561 0 27.5881C0 17.12 8.48715 8.63281 18.9553 8.63281ZM18.9492 18.4434C13.8993 18.4437 9.8065 22.538 9.80649 27.5881C9.80649 32.6382 13.8993 36.7325 18.9492 36.7328C23.9995 36.7328 28.0939 32.6384 28.0939 27.5881C28.0939 22.5378 23.9995 18.4434 18.9492 18.4434Z" fill="currentColor"/>
           </svg>
         </div>
         <canvas id="scene"></canvas>
