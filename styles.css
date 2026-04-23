@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Aeonik Fono";
+  src: url("file:///Users/huyi/Library/Fonts/AeonikFono-Medium.otf") format("opentype");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
 :root {
   --bg-flat: #d8d8d4;
   --panel: rgba(248, 248, 249, 0.94);
@@ -104,6 +112,8 @@ body {
 }
 
 .field input[type="number"],
+.field input[type="text"],
+.field textarea,
 .field input[type="color"],
 .field select {
   width: 100%;
@@ -119,9 +129,19 @@ body {
 }
 
 .field input[type="number"]:focus,
+.field input[type="text"]:focus,
+.field textarea:focus,
 .field input[type="color"]:focus,
 .field select:focus {
   border-color: rgba(31, 32, 35, 0.45);
+}
+
+.field textarea {
+  min-height: 96px;
+  height: auto;
+  padding: 8px;
+  resize: vertical;
+  line-height: 1.45;
 }
 
 .field input[type="file"] {
@@ -215,7 +235,8 @@ body {
 }
 
 #clear-image-btn,
-#clear-mode4-images-btn {
+#clear-mode4-images-btn,
+#clear-play1-environment-btn {
   margin-top: 8px;
   width: 100%;
   height: 32px;
@@ -235,10 +256,100 @@ body {
   border-top: 1px solid var(--border);
 }
 
+.mode1-controls {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
 .mode5-controls {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid var(--border);
+}
+
+.mode6-controls {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.mode6-segments-list {
+  display: grid;
+  gap: 8px;
+}
+
+.mode6-segment {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f5f5f7;
+}
+
+.mode6-segment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mode6-segment-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mode6-segment-input {
+  width: 100%;
+  min-height: 84px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f3f3f5;
+  color: var(--text);
+  padding: 8px;
+  font-family: inherit;
+  line-height: 1.45;
+  resize: vertical;
+  outline: none;
+  transition: border-color 120ms ease;
+}
+
+.mode6-segment-input:focus {
+  border-color: rgba(31, 32, 35, 0.45);
+}
+
+.mode6-segment-remove,
+#mode6-add-segment-btn {
+  width: 100%;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f3f3f5;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+}
+
+.mode6-segment-remove {
+  width: auto;
+  min-width: 74px;
+  padding: 0 10px;
+}
+
+.mode6-segment-remove:hover,
+#mode6-add-segment-btn:hover {
+  background: #ececef;
+}
+
+.mode6-segment-remove:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .ui-actions {
@@ -247,7 +358,8 @@ body {
 }
 
 #clear-image-btn:hover,
-#clear-mode4-images-btn:hover {
+#clear-mode4-images-btn:hover,
+#clear-play1-environment-btn:hover {
   background: #ececef;
 }
 
@@ -397,6 +509,18 @@ body {
   transform-style: preserve-3d;
 }
 
+#play1-environment {
+  display: none;
+}
+
+#play1-environment::after {
+  display: none;
+}
+
+#frame.play1-environment-active #play1-environment {
+  display: none;
+}
+
 #frame-bg-image {
   position: absolute;
   inset: 0;
@@ -413,6 +537,66 @@ body {
   display: block;
 }
 
+.mode6-text-orbit,
+#mode6-text-orbit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  z-index: 3;
+  display: none;
+  pointer-events: none;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+#frame.mode6-text-active .mode6-text-orbit,
+#frame.mode6-text-active #mode6-text-orbit {
+  display: block;
+}
+
+.mode6-text-carrier,
+#mode6-text-carrier {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.mode6-middle-text,
+#mode6-middle-text {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: inline-block;
+  width: max-content;
+  max-width: none;
+  margin: 0;
+  color: var(--text);
+  font-family:
+    "Aeonik Fono",
+    Arial,
+    "Helvetica Neue",
+    sans-serif;
+  font-size: 44.15px;
+  font-weight: 500;
+  line-height: 0.84;
+  letter-spacing: -0.02em;
+  white-space: pre;
+  text-align: center;
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+  font-synthesis: none;
+  will-change: transform;
+}
+
 #mode5-olab-wrap,
 .mode5-olab-wrap {
   position: absolute;
@@ -420,7 +604,7 @@ body {
   top: 0;
   width: 0;
   height: 0;
-  z-index: 2;
+  z-index: 3;
   pointer-events: none;
   display: none;
   transform-style: preserve-3d;
@@ -460,7 +644,7 @@ body {
 
 #scene {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: block;
   width: 100%;
   height: 100%;

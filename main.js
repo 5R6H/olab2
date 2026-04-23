@@ -23,10 +23,18 @@
   const mode4ZoomAmountRange = document.getElementById("mode4-zoom-amount-range");
   const mode4ZoomAmountNumber = document.getElementById("mode4-zoom-amount-number");
   const mode4ImageModeSelect = document.getElementById("mode4-image-mode");
+  const mode1Controls = document.getElementById("mode1-controls");
   const mode4Controls = document.getElementById("mode4-controls");
   const mode5Controls = document.getElementById("mode5-controls");
+  const mode6Controls = document.getElementById("mode6-controls");
   const mode5CenterModeSelect = document.getElementById("mode5-center-mode");
   const mode5StackToggle = document.getElementById("mode5-stack-toggle");
+  const mode6SegmentsList = document.getElementById("mode6-segments-list");
+  const mode6AddSegmentButton = document.getElementById("mode6-add-segment-btn");
+  const mode6FillTextToggle = document.getElementById("mode6-fill-text-toggle");
+  const play1EnvironmentToggle = document.getElementById("play1-environment-toggle");
+  const play1EnvironmentInput = document.getElementById("play1-environment-input");
+  const clearPlay1EnvironmentButton = document.getElementById("clear-play1-environment-btn");
   const proportionLockInput = document.getElementById("proportion-lock");
   const zoomRange = document.getElementById("zoom-range");
   const zoomNumber = document.getElementById("zoom-number");
@@ -48,6 +56,10 @@
   const rotYInput = document.getElementById("rot-y-input");
   const rotZInput = document.getElementById("rot-z-input");
   const frameBgImage = document.getElementById("frame-bg-image");
+  const play1Environment = document.getElementById("play1-environment");
+  const mode6TextOrbit = document.getElementById("mode6-text-orbit");
+  const mode6TextCarrier = document.getElementById("mode6-text-carrier");
+  const mode6MiddleText = document.getElementById("mode6-middle-text");
   const mode5OlabWrap = document.getElementById("mode5-olab-wrap");
   const mode5OlabSvg = document.getElementById("mode5-olab-svg");
   const mode5OlabLabGroup = document.getElementById("mode5-olab-lab");
@@ -84,12 +96,12 @@
     oPath: mode5OlabOPath,
   };
 
-  const mode5OlabSecondary = (() => {
+  function createOlabCloneInstance(cloneId, suffix) {
     if (!frame || !mode5OlabWrap) return null;
     const clone = mode5OlabWrap.cloneNode(true);
-    clone.id = "mode5-olab-wrap-secondary";
+    clone.id = cloneId;
     clone.querySelectorAll("[id]").forEach((element) => {
-      element.id = `${element.id}-secondary`;
+      element.id = `${element.id}-${suffix}`;
     });
     clone.style.display = "none";
     frame.appendChild(clone);
@@ -100,9 +112,69 @@
       oSvg: clone.querySelector(".mode5-olab-o-svg"),
       oPath: clone.querySelector(".mode5-olab-o-svg path"),
     };
-  })();
+  }
+
+  const mode5OlabSecondary = createOlabCloneInstance(
+    "mode5-olab-wrap-secondary",
+    "secondary",
+  );
+
+  const mode6OlabInstance = createOlabCloneInstance(
+    "mode6-olab-wrap",
+    "mode6",
+  );
 
   const mode5OlabInstances = [mode5OlabPrimary, mode5OlabSecondary].filter(Boolean);
+  const olabColorInstances = [mode5OlabPrimary, mode5OlabSecondary, mode6OlabInstance].filter(Boolean);
+
+  function createMode6TextLayer(orbit, carrier, text, suffix) {
+    if (!orbit || !carrier || !text) return null;
+    if (!suffix) {
+      return { orbit, carrier, text };
+    }
+    const clone = orbit.cloneNode(true);
+    clone.id = `${orbit.id}-${suffix}`;
+    clone.querySelectorAll("[id]").forEach((element) => {
+      element.id = `${element.id}-${suffix}`;
+    });
+    clone.style.display = "none";
+    frame.appendChild(clone);
+    return {
+      orbit: clone,
+      carrier: clone.querySelector("[id^='mode6-text-carrier']"),
+      text: clone.querySelector("[id^='mode6-middle-text']"),
+    };
+  }
+
+  const mode6TextPrimary = createMode6TextLayer(
+    mode6TextOrbit,
+    mode6TextCarrier,
+    mode6MiddleText,
+    "",
+  );
+  const mode6TextSecondary = createMode6TextLayer(
+    mode6TextOrbit,
+    mode6TextCarrier,
+    mode6MiddleText,
+    "secondary",
+  );
+  const mode6TextLayers = [mode6TextPrimary, mode6TextSecondary].filter(Boolean);
+  const mode6TextCanvas = document.createElement("canvas");
+  mode6TextCanvas.id = "mode6-text-projection";
+  mode6TextCanvas.setAttribute("aria-hidden", "true");
+  mode6TextCanvas.style.position = "absolute";
+  mode6TextCanvas.style.inset = "0";
+  mode6TextCanvas.style.width = "100%";
+  mode6TextCanvas.style.height = "100%";
+  mode6TextCanvas.style.pointerEvents = "none";
+  mode6TextCanvas.style.zIndex = "3";
+  mode6TextCanvas.style.display = "none";
+  frame.appendChild(mode6TextCanvas);
+  const mode6TextGl = mode6TextCanvas.getContext("webgl", {
+    antialias: true,
+    alpha: true,
+    premultipliedAlpha: true,
+  });
 
   const gl = canvas.getContext("webgl", { antialias: true, alpha: true });
   if (!gl) {
@@ -148,6 +220,9 @@
     minPerspectiveFovDeg: 12,
     maxPerspectiveFovDeg: 200,
     maxPerspectiveEffectiveFovDeg: 170,
+    defaultPlay1EnvironmentEnabled: false,
+    defaultPlay6ZoomZ: 57.6,
+    defaultPlay6PerspectiveFovDeg: 130,
     playMode4BaseGreen: [0, 1, 0],
     mode5OlabViewWidthSvg: 155,
     mode5OlabViewHeightSvg: 47,
@@ -156,7 +231,20 @@
     mode5OlabOCenterYSvg: 27.587105,
     mode5OlabLabShiftSvg: 0,
     defaultMode5CenterMode: "anchor",
+    defaultMode6Text: "INSERT TEXT",
+    defaultMode6CameraZ: 78,
+    defaultMode6TopPaddingRatio: 0.08,
+    defaultMode6BottomPaddingRatio: 0.08,
+    defaultMode6TextFontSizeRatio: 44.15 / 600,
+    defaultMode6TextOrbitDistanceFrameWidthRatio: 0.5 * 1.2,
+    defaultMode6TextDepthPx: 220,
+    defaultMode6TextCenterYRatio: 0.5,
+    defaultMode6TopCenterYRatio: 0.22,
     defaultLightDir: [0.45, 0.75, 0.7],
+    defaultPlay2SpinYSpeed: 3.7,
+    play1EnvironmentFollowX: 0.2,
+    play1EnvironmentFollowY: 0.2,
+    play1EnvironmentFollowZ: 0.2,
     maxDiameterToLengthRatio: 1 / 1.5,
     playMode2MaxDiameterToLengthRatio: 1 / 2,
     mode5StackCenterGapRatio:
@@ -189,6 +277,241 @@
     depthDynamic: false,
     playMode: "off",
   };
+
+  function createPlay1EnvironmentSvgDataUrl() {
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+        <defs>
+          <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#d9e1ea"/>
+            <stop offset="38%" stop-color="#eef3f8"/>
+            <stop offset="57%" stop-color="#f8f8f3"/>
+            <stop offset="72%" stop-color="#d8d4cf"/>
+            <stop offset="100%" stop-color="#b6b1ab"/>
+          </linearGradient>
+          <radialGradient id="sun" cx="50%" cy="44%" r="34%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.96"/>
+            <stop offset="45%" stop-color="#ffffff" stop-opacity="0.42"/>
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="#64605a" stop-opacity="0.18"/>
+          </linearGradient>
+          <filter id="blurSoft" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="22"/>
+          </filter>
+        </defs>
+        <rect width="1600" height="900" fill="url(#bg)"/>
+        <ellipse cx="800" cy="402" rx="610" ry="180" fill="url(#sun)"/>
+        <rect x="0" y="512" width="1600" height="388" fill="url(#floor)"/>
+        <g opacity="0.58">
+          <rect x="210" y="164" width="120" height="360" rx="60" fill="white" filter="url(#blurSoft)"/>
+          <rect x="520" y="136" width="148" height="402" rx="74" fill="white" filter="url(#blurSoft)"/>
+          <rect x="932" y="136" width="148" height="402" rx="74" fill="white" filter="url(#blurSoft)"/>
+          <rect x="1270" y="164" width="120" height="360" rx="60" fill="white" filter="url(#blurSoft)"/>
+        </g>
+        <g opacity="0.18" stroke="#ffffff" stroke-width="2" fill="none">
+          <path d="M0 556 Q800 418 1600 556"/>
+          <path d="M0 604 Q800 458 1600 604"/>
+          <path d="M0 664 Q800 516 1600 664"/>
+          <path d="M0 736 Q800 598 1600 736"/>
+        </g>
+        <g opacity="0.09" stroke="#7d868f" stroke-width="1">
+          <path d="M268 0 V900"/>
+          <path d="M532 0 V900"/>
+          <path d="M800 0 V900"/>
+          <path d="M1068 0 V900"/>
+          <path d="M1332 0 V900"/>
+        </g>
+      </svg>
+    `;
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+  }
+
+  const playMode1 = {
+    environmentEnabled: constants.defaultPlay1EnvironmentEnabled,
+    builtInEnvironmentUrl: createPlay1EnvironmentSvgDataUrl(),
+    environmentUrl: "",
+    customEnvironmentObjectUrl: null,
+    environmentTexture: null,
+    environmentTextureWidth: 1,
+    environmentTextureHeight: 1,
+    environmentLoadVersion: 0,
+  };
+
+  const PLAY1_EXR_FLOAT_TYPE = 1015;
+  const PLAY1_EXR_MAX_LONG_EDGE = 4096;
+  let play1ExrParserPromise = null;
+
+  playMode1.environmentUrl = playMode1.builtInEnvironmentUrl;
+
+  function disposePlay1EnvironmentTexture() {
+    if (playMode1.environmentTexture) {
+      gl.deleteTexture(playMode1.environmentTexture);
+      playMode1.environmentTexture = null;
+    }
+    playMode1.environmentTextureWidth = 1;
+    playMode1.environmentTextureHeight = 1;
+  }
+
+  async function refreshPlay1EnvironmentTextureFromUrl(url) {
+    const safeUrl = url || playMode1.builtInEnvironmentUrl;
+    const loadVersion = ++playMode1.environmentLoadVersion;
+    const image = await loadImageFromObjectUrl(safeUrl);
+    const nextTexture = createTextureFromImage(image);
+    if (loadVersion !== playMode1.environmentLoadVersion) {
+      gl.deleteTexture(nextTexture);
+      return false;
+    }
+    if (playMode1.environmentTexture) {
+      gl.deleteTexture(playMode1.environmentTexture);
+    }
+    playMode1.environmentTexture = nextTexture;
+    playMode1.environmentTextureWidth = Math.max(
+      1,
+      Number(image.naturalWidth) || Number(image.width) || 1,
+    );
+    playMode1.environmentTextureHeight = Math.max(
+      1,
+      Number(image.naturalHeight) || Number(image.height) || 1,
+    );
+    return true;
+  }
+
+  async function applyPlay1EnvironmentSource(url) {
+    playMode1.environmentUrl = url || playMode1.builtInEnvironmentUrl;
+    return refreshPlay1EnvironmentTextureFromUrl(playMode1.environmentUrl);
+  }
+
+  function clearPlay1EnvironmentResources() {
+    if (playMode1.customEnvironmentObjectUrl) {
+      URL.revokeObjectURL(playMode1.customEnvironmentObjectUrl);
+      playMode1.customEnvironmentObjectUrl = null;
+    }
+    playMode1.environmentLoadVersion += 1;
+    disposePlay1EnvironmentTexture();
+  }
+
+  async function clearPlay1EnvironmentCustomPhoto(keepInputValue) {
+    if (playMode1.customEnvironmentObjectUrl) {
+      URL.revokeObjectURL(playMode1.customEnvironmentObjectUrl);
+      playMode1.customEnvironmentObjectUrl = null;
+    }
+    await applyPlay1EnvironmentSource(playMode1.builtInEnvironmentUrl);
+    if (!keepInputValue && play1EnvironmentInput) {
+      play1EnvironmentInput.value = "";
+    }
+  }
+
+  function setPlay1EnvironmentFromFile(file) {
+    if (!file) return Promise.resolve({ ok: false, reason: "missing" });
+    const fileName = String(file.name || "").toLowerCase();
+    const mimeType = String(file.type || "").toLowerCase();
+    const isExr = fileName.endsWith(".exr") || mimeType.includes("exr");
+    const isBrowserImage = mimeType.startsWith("image/") || /\.(png|jpe?g|webp|avif|gif|bmp|svg)$/i.test(fileName);
+    if (!isExr && !isBrowserImage) {
+      return Promise.resolve({ ok: false, reason: "unsupported" });
+    }
+
+    return (async () => {
+      const objectUrl = isExr
+        ? await createToneMappedPlay1EnvironmentUrlFromExr(file)
+        : URL.createObjectURL(file);
+      if (!objectUrl) {
+        return { ok: false, reason: isExr ? "exr-decode" : "image-decode" };
+      }
+      if (playMode1.customEnvironmentObjectUrl) {
+        URL.revokeObjectURL(playMode1.customEnvironmentObjectUrl);
+      }
+      playMode1.customEnvironmentObjectUrl = objectUrl;
+      await applyPlay1EnvironmentSource(objectUrl);
+      return { ok: true, source: isExr ? "exr" : "image" };
+    })();
+  }
+
+  async function loadPlay1ExrParser() {
+    if (!play1ExrParserPromise) {
+      play1ExrParserPromise = import("https://esm.sh/parse-exr?bundle")
+        .then((module) => module.default || module.parseExr || module)
+        .catch((error) => {
+          play1ExrParserPromise = null;
+          throw error;
+        });
+    }
+    return play1ExrParserPromise;
+  }
+
+  function toneMapPlay1HdrValue(value) {
+    const safe = Math.max(0, Number.isFinite(value) ? value : 0);
+    const exposed = safe * 1.35;
+    const mapped = exposed / (1 + exposed);
+    return Math.pow(clamp(mapped, 0, 1), 1 / 2.2);
+  }
+
+  async function createToneMappedPlay1EnvironmentUrlFromExr(file) {
+    const parseExr = await loadPlay1ExrParser();
+    const buffer = await file.arrayBuffer();
+    const parsed = parseExr(buffer, PLAY1_EXR_FLOAT_TYPE);
+    const width = Math.max(1, Number(parsed.width) || 0);
+    const height = Math.max(1, Number(parsed.height) || 0);
+    const sourceData = parsed.data;
+    if (!width || !height || !sourceData || !sourceData.length) {
+      throw new Error("Invalid EXR image data.");
+    }
+
+    const pixelCount = width * height;
+    const stride = Math.max(1, Math.round(sourceData.length / pixelCount));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Canvas 2D unavailable.");
+    }
+
+    const imageData = ctx.createImageData(width, height);
+    const target = imageData.data;
+
+    for (let i = 0; i < pixelCount; i += 1) {
+      const src = i * stride;
+      const r = sourceData[src];
+      const g = stride > 1 ? sourceData[src + 1] : r;
+      const b = stride > 2 ? sourceData[src + 2] : r;
+      const a = stride > 3 ? clamp(sourceData[src + 3], 0, 1) : 1;
+      const dst = i * 4;
+      target[dst] = Math.round(toneMapPlay1HdrValue(r) * 255);
+      target[dst + 1] = Math.round(toneMapPlay1HdrValue(g) * 255);
+      target[dst + 2] = Math.round(toneMapPlay1HdrValue(b) * 255);
+      target[dst + 3] = Math.round(a * 255);
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+
+    let outputCanvas = canvas;
+    const longestEdge = Math.max(width, height);
+    if (longestEdge > PLAY1_EXR_MAX_LONG_EDGE) {
+      const scale = PLAY1_EXR_MAX_LONG_EDGE / longestEdge;
+      const resized = document.createElement("canvas");
+      resized.width = Math.max(1, Math.round(width * scale));
+      resized.height = Math.max(1, Math.round(height * scale));
+      const resizedCtx = resized.getContext("2d");
+      if (!resizedCtx) {
+        throw new Error("Canvas resize unavailable.");
+      }
+      resizedCtx.drawImage(canvas, 0, 0, resized.width, resized.height);
+      outputCanvas = resized;
+    }
+
+    const blob = await new Promise((resolve) => {
+      outputCanvas.toBlob((result) => resolve(result), "image/png");
+    });
+    if (!blob) {
+      throw new Error("EXR conversion failed.");
+    }
+    return URL.createObjectURL(blob);
+  }
+
   const vertexSource = `
     attribute vec3 aPosition;
     attribute vec3 aNormal;
@@ -377,9 +700,7 @@
 
   function applyMode4Ease01(value) {
     const t = clamp(value, 0, 1);
-    const easedSoft = easeInOutSine01(t);
-    const easedStrong = easeInOutStrong01(t);
-    const eased = easedSoft + (easedStrong - easedSoft) * 0.72;
+    const eased = easeInOutExpo01(t);
     return t + (eased - t) * playMode4.easeAmount;
   }
 
@@ -412,6 +733,25 @@
     return 1 - (inv * inv * inv * inv * inv) / 2;
   }
 
+  function easeInOutExtreme01(value) {
+    const t = clamp(value, 0, 1);
+    if (t < 0.5) {
+      return 64 * t * t * t * t * t * t * t;
+    }
+    const inv = -2 * t + 2;
+    return 1 - (inv * inv * inv * inv * inv * inv * inv) / 2;
+  }
+
+  function easeInOutExpo01(value) {
+    const t = clamp(value, 0, 1);
+    if (t <= 0) return 0;
+    if (t >= 1) return 1;
+    if (t < 0.5) {
+      return Math.pow(2, 20 * t - 10) / 2;
+    }
+    return (2 - Math.pow(2, -20 * t + 10)) / 2;
+  }
+
   function compileShader(type, source) {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, source);
@@ -419,6 +759,18 @@
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
       const log = gl.getShaderInfoLog(shader) || "Unknown shader compile error";
       gl.deleteShader(shader);
+      throw new Error(log);
+    }
+    return shader;
+  }
+
+  function compileShaderFor(glContext, type, source) {
+    const shader = glContext.createShader(type);
+    glContext.shaderSource(shader, source);
+    glContext.compileShader(shader);
+    if (!glContext.getShaderParameter(shader, glContext.COMPILE_STATUS)) {
+      const log = glContext.getShaderInfoLog(shader) || "Unknown shader compile error";
+      glContext.deleteShader(shader);
       throw new Error(log);
     }
     return shader;
@@ -432,6 +784,19 @@
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
       const log = gl.getProgramInfoLog(program) || "Unknown program link error";
       gl.deleteProgram(program);
+      throw new Error(log);
+    }
+    return program;
+  }
+
+  function createProgramFor(glContext, vs, fs) {
+    const program = glContext.createProgram();
+    glContext.attachShader(program, vs);
+    glContext.attachShader(program, fs);
+    glContext.linkProgram(program);
+    if (!glContext.getProgramParameter(program, glContext.LINK_STATUS)) {
+      const log = glContext.getProgramInfoLog(program) || "Unknown program link error";
+      glContext.deleteProgram(program);
       throw new Error(log);
     }
     return program;
@@ -600,6 +965,43 @@
   );
   gl.useProgram(program);
 
+  const mode6TextVertexSource = `
+    attribute vec3 aWorldPos;
+    attribute vec2 aUv;
+
+    uniform float uFovY;
+    uniform float uAspect;
+    uniform float uCameraZ;
+
+    varying vec2 vUv;
+
+    void main() {
+      float f = 1.0 / tan(uFovY * 0.5);
+      vec3 view = vec3(aWorldPos.x, aWorldPos.y, aWorldPos.z - uCameraZ);
+      float clipX = view.x * (f / uAspect);
+      float clipY = view.y * f;
+      float clipW = -view.z;
+      gl_Position = vec4(clipX, clipY, 0.0, clipW);
+      vUv = aUv;
+    }
+  `;
+
+  const mode6TextFragmentSource = `
+    precision mediump float;
+
+    uniform sampler2D uTex;
+
+    varying vec2 vUv;
+
+    void main() {
+      vec4 tex = texture2D(uTex, vUv);
+      if (tex.a < 0.01) {
+        discard;
+      }
+      gl_FragColor = tex;
+    }
+  `;
+
   const postVertexSource = `
     attribute vec2 aPosition;
     varying vec2 vUv;
@@ -662,6 +1064,78 @@
     compileShader(gl.FRAGMENT_SHADER, postFragmentSource),
   );
 
+  const envFragmentSource = `
+    precision mediump float;
+
+    uniform sampler2D uEnvTex;
+    uniform vec2 uViewportSize;
+    uniform float uFovY;
+    uniform vec3 uEnvRot;
+
+    varying vec2 vUv;
+
+    const float PI = 3.1415926535897932384626433832795;
+
+    vec3 rotateX(vec3 p, float a) {
+      float c = cos(a);
+      float s = sin(a);
+      return vec3(
+        p.x,
+        p.y * c - p.z * s,
+        p.y * s + p.z * c
+      );
+    }
+
+    vec3 rotateY(vec3 p, float a) {
+      float c = cos(a);
+      float s = sin(a);
+      return vec3(
+        p.x * c + p.z * s,
+        p.y,
+        -p.x * s + p.z * c
+      );
+    }
+
+    vec3 rotateZ(vec3 p, float a) {
+      float c = cos(a);
+      float s = sin(a);
+      return vec3(
+        p.x * c - p.y * s,
+        p.x * s + p.y * c,
+        p.z
+      );
+    }
+
+    vec3 applyInverseStageRotation(vec3 p, vec3 rot) {
+      p = rotateZ(p, -rot.z);
+      p = rotateY(p, -rot.y);
+      p = rotateX(p, -rot.x);
+      return p;
+    }
+
+    void main() {
+      float aspect = max(0.0001, uViewportSize.x / max(1.0, uViewportSize.y));
+      float tanHalfFov = tan(uFovY * 0.5);
+      vec2 ndc = vec2(vUv.x * 2.0 - 1.0, vUv.y * 2.0 - 1.0);
+      vec3 rayDir = normalize(vec3(
+        ndc.x * aspect * tanHalfFov,
+        ndc.y * tanHalfFov,
+        -1.0
+      ));
+      rayDir = applyInverseStageRotation(rayDir, uEnvRot);
+
+      float u = fract(atan(rayDir.x, -rayDir.z) / (2.0 * PI) + 0.5);
+      float v = acos(clamp(rayDir.y, -1.0, 1.0)) / PI;
+      vec3 color = texture2D(uEnvTex, vec2(u, clamp(v, 0.001, 0.999))).rgb;
+      gl_FragColor = vec4(color, 1.0);
+    }
+  `;
+
+  const envProgram = createProgram(
+    compileShader(gl.VERTEX_SHADER, postVertexSource),
+    compileShader(gl.FRAGMENT_SHADER, envFragmentSource),
+  );
+
   const attribPosition = gl.getAttribLocation(program, "aPosition");
   const attribNormal = gl.getAttribLocation(program, "aNormal");
   const attribUv = gl.getAttribLocation(program, "aUv");
@@ -694,6 +1168,11 @@
   const postTexelSize = gl.getUniformLocation(postProgram, "uTexelSize");
   const postBlurCenterUv = gl.getUniformLocation(postProgram, "uBlurCenterUv");
   const postBlurEnabled = gl.getUniformLocation(postProgram, "uBlurEnabled");
+  const envAttribPosition = gl.getAttribLocation(envProgram, "aPosition");
+  const envTextureUniform = gl.getUniformLocation(envProgram, "uEnvTex");
+  const envViewportSizeUniform = gl.getUniformLocation(envProgram, "uViewportSize");
+  const envFovUniform = gl.getUniformLocation(envProgram, "uFovY");
+  const envRotUniform = gl.getUniformLocation(envProgram, "uEnvRot");
 
   const postQuadBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, postQuadBuffer);
@@ -745,6 +1224,33 @@
   gl.uniform1f(uTexMapMode, 0);
   gl.uniform2f(uCanvasSize, 1, 1);
   gl.uniform2f(uTexSize, 1, 1);
+
+  let mode6TextProgram = null;
+  let mode6TextAttribWorldPos = -1;
+  let mode6TextAttribUv = -1;
+  let mode6TextUniformAspect = null;
+  let mode6TextUniformFov = null;
+  let mode6TextUniformCameraZ = null;
+  let mode6TextUniformTexture = null;
+  let mode6TextQuadBuffer = null;
+
+  if (mode6TextGl) {
+    mode6TextProgram = createProgramFor(
+      mode6TextGl,
+      compileShaderFor(mode6TextGl, mode6TextGl.VERTEX_SHADER, mode6TextVertexSource),
+      compileShaderFor(mode6TextGl, mode6TextGl.FRAGMENT_SHADER, mode6TextFragmentSource),
+    );
+    mode6TextAttribWorldPos = mode6TextGl.getAttribLocation(mode6TextProgram, "aWorldPos");
+    mode6TextAttribUv = mode6TextGl.getAttribLocation(mode6TextProgram, "aUv");
+    mode6TextUniformAspect = mode6TextGl.getUniformLocation(mode6TextProgram, "uAspect");
+    mode6TextUniformFov = mode6TextGl.getUniformLocation(mode6TextProgram, "uFovY");
+    mode6TextUniformCameraZ = mode6TextGl.getUniformLocation(mode6TextProgram, "uCameraZ");
+    mode6TextUniformTexture = mode6TextGl.getUniformLocation(mode6TextProgram, "uTex");
+    mode6TextQuadBuffer = mode6TextGl.createBuffer();
+    mode6TextGl.enable(mode6TextGl.BLEND);
+    mode6TextGl.blendFunc(mode6TextGl.SRC_ALPHA, mode6TextGl.ONE_MINUS_SRC_ALPHA);
+    mode6TextGl.disable(mode6TextGl.DEPTH_TEST);
+  }
 
   const stage = {
     pos: [0, 0, 0],
@@ -882,6 +1388,7 @@
     gl.uniform1f(uFovY, getPerspectiveFovRad());
     updateCameraUniforms();
     syncPerspectiveInputs();
+    refreshMode6BaseLayout();
   }
 
   function hexToRgb01(hex) {
@@ -902,7 +1409,7 @@
     frustumObject.color = rgb.slice();
     frustumLargeBaseObject.color = rgb.slice();
     const cssColor = rgb01ToCss(rgb);
-    mode5OlabInstances.forEach((instance) => {
+    olabColorInstances.forEach((instance) => {
       if (instance && instance.svg) {
         instance.svg.style.color = cssColor;
       }
@@ -910,6 +1417,13 @@
         instance.oSvg.style.color = cssColor;
       }
     });
+    mode6TextLayers.forEach((layer) => {
+      if (layer && layer.text) {
+        layer.text.style.color = cssColor;
+      }
+    });
+    syncMode6TextEntries();
+    renderMode6TextCanvas();
   }
 
   function rebuildFrustumFor(lengthSvg, largeDiameterSvg) {
@@ -939,10 +1453,11 @@
     frustumLayout.lengthSvg = lengthSvg;
     frustumLayout.largeDiameterSvg = largeDiameterSvg;
 
-    if (state.playMode !== "off") {
+    if (state.playMode !== "off" && state.playMode !== "play5") {
       sphereObject.pos[0] = sphereCenterX;
       frustumObject.pos[0] = frustumCenterX;
       frustumLargeBaseObject.pos[0] = frustumCenterX;
+      refreshMode6BaseLayout();
       return;
     }
 
@@ -952,6 +1467,7 @@
     sphereObject.pos[0] = sphereCenterX - centerX;
     frustumObject.pos[0] = frustumCenterX - centerX;
     frustumLargeBaseObject.pos[0] = frustumCenterX - centerX;
+    refreshMode6BaseLayout();
   }
 
   function rotateX3(vx, vy, vz, a) {
@@ -993,6 +1509,14 @@
     return [v[0] / len, v[1] / len, v[2] / len];
   }
 
+  function addScaled3(base, dir, scalar) {
+    return [
+      base[0] + dir[0] * scalar,
+      base[1] + dir[1] * scalar,
+      base[2] + dir[2] * scalar,
+    ];
+  }
+
   function rotateVecByEuler(v, rot) {
     let x = v[0];
     let y = v[1];
@@ -1030,6 +1554,22 @@
       x: (ndcX * 0.5 + 0.5) * width,
       y: (1 - (ndcY * 0.5 + 0.5)) * height,
       depth: clipW,
+    };
+  }
+
+  function getWorldUnitsPerCssPixelAtDepth(depth, rectWidth, rectHeight) {
+    const safeDepth = Math.max(0.001, Number.isFinite(depth) ? depth : getActiveCameraZ());
+    const safeRectWidth = Math.max(1, rectWidth);
+    const safeRectHeight = Math.max(1, rectHeight);
+    const width = Math.max(2, canvas.width);
+    const height = Math.max(2, canvas.height);
+    const aspect = width / height;
+    const f = 1 / Math.tan(getPerspectiveFovRad() * 0.5);
+    const worldPerCanvasPixelX = (2 * safeDepth * aspect) / (width * f);
+    const worldPerCanvasPixelY = (2 * safeDepth) / (height * f);
+    return {
+      x: worldPerCanvasPixelX * (width / safeRectWidth),
+      y: worldPerCanvasPixelY * (height / safeRectHeight),
     };
   }
 
@@ -1211,6 +1751,26 @@
     gl.useProgram(program);
   }
 
+  function drawPlay1EnvironmentPass() {
+    if (!playMode1.environmentTexture) return;
+    const envRotX = stage.rotX * constants.play1EnvironmentFollowX;
+    const envRotY = stage.rotY * constants.play1EnvironmentFollowY;
+    const envRotZ = stage.rotZ * constants.play1EnvironmentFollowZ;
+    gl.useProgram(envProgram);
+    gl.bindBuffer(gl.ARRAY_BUFFER, postQuadBuffer);
+    gl.vertexAttribPointer(envAttribPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(envAttribPosition);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, playMode1.environmentTexture);
+    gl.uniform1i(envTextureUniform, 0);
+    gl.uniform2f(envViewportSizeUniform, canvas.width, canvas.height);
+    gl.uniform1f(envFovUniform, getPerspectiveFovRad());
+    gl.uniform3f(envRotUniform, envRotX, envRotY, envRotZ);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.useProgram(program);
+  }
+
   function rgb01ToCss(rgb) {
     const r = Math.round(clamp(rgb[0], 0, 1) * 255);
     const g = Math.round(clamp(rgb[1], 0, 1) * 255);
@@ -1329,6 +1889,22 @@
     }
   }
 
+  function setCameraZoom(value) {
+    const next = clamp(
+      Number(value),
+      constants.minCameraZ,
+      constants.maxCameraZ,
+    );
+    if (!Number.isFinite(next)) return;
+    state.cameraZ = next;
+    if (state.playMode === "play6") {
+      playMode4.zoomZ = next;
+    }
+    updateCameraUniforms();
+    syncZoomInputs();
+    refreshMode6BaseLayout();
+  }
+
   function syncMode4ExpandedLengthInput() {
     if (!mode4ExpandedLengthInput) return;
     if (document.activeElement !== mode4ExpandedLengthInput) {
@@ -1351,14 +1927,38 @@
     }
   }
 
+  function syncPlay1EnvironmentToggle() {
+    if (!play1EnvironmentToggle) return;
+    if (document.activeElement !== play1EnvironmentToggle) {
+      play1EnvironmentToggle.checked = !!playMode1.environmentEnabled;
+    }
+  }
+
+  function updatePlay1EnvironmentVisual() {
+    if (!frame || !play1Environment) return;
+    frame.classList.remove("play1-environment-active");
+    play1Environment.style.backgroundImage = "";
+    play1Environment.style.backgroundPosition = "0 0";
+    play1Environment.style.transform = "none";
+  }
+
   function syncModePanels() {
+    if (mode1Controls) {
+      mode1Controls.hidden = !(state.playMode === "play1" || state.playMode === "play2");
+    }
     if (mode4Controls) {
-      mode4Controls.hidden = state.playMode !== "play5";
+      mode4Controls.hidden = state.playMode !== "play6";
     }
     if (mode5Controls) {
-      mode5Controls.hidden = state.playMode !== "play6";
+      mode5Controls.hidden = state.playMode !== "play7";
     }
+    if (mode6Controls) {
+      mode6Controls.hidden = state.playMode !== "play5";
+    }
+    syncPlay1EnvironmentToggle();
     syncMode5StackToggleInput();
+    syncMode6FillTextToggleInput();
+    renderMode6SegmentsEditor();
   }
 
   function syncAppearancePanels() {
@@ -1383,7 +1983,7 @@
     );
     playMode4.expandedLengthSvg = next;
 
-    if (state.playMode === "play5" && playMode4.phase === "hold") {
+    if (state.playMode === "play6" && playMode4.phase === "hold") {
       playMode4.lengthCurrent = playMode4.expandedLengthSvg;
       playMode4.diameterCurrent = playMode4.expandedLengthSvg * playMode4.defaultScaleRatio;
       rebuildFrustumFor(playMode4.lengthCurrent, playMode4.diameterCurrent);
@@ -1565,6 +2165,9 @@
       frameHeightInput.value = String(Math.round(state.frameHeight));
     }
     resizeCanvasToFrame();
+    resizeMode6TextCanvas();
+    updatePlay1EnvironmentVisual();
+    refreshMode6BaseLayout();
   }
 
   function updateWorkspaceShellBounds() {
@@ -1696,13 +2299,13 @@
     const count = playMode4Images.length;
     if (!mode4ImagesStatus) return;
     if (!count) {
-      mode4ImagesStatus.textContent = "Play mode 5 mask images: none.";
+      mode4ImagesStatus.textContent = "Play mode 4 mask images: none.";
       renderMode4ImagesList();
       return;
     }
     normalizePlayMode4TextureIndex();
     mode4ImagesStatus.textContent =
-      `Play mode 5 mask images: ${count} loaded (current ${playMode4TextureIndex + 1}/${count}).`;
+      `Play mode 4 mask images: ${count} loaded (current ${playMode4TextureIndex + 1}/${count}).`;
     renderMode4ImagesList();
   }
 
@@ -1720,6 +2323,33 @@
     return tex;
   }
 
+  function createMode6TextTextureFromCanvas(sourceCanvas) {
+    if (!mode6TextGl || !sourceCanvas) return null;
+    const tex = mode6TextGl.createTexture();
+    mode6TextGl.activeTexture(mode6TextGl.TEXTURE0);
+    mode6TextGl.bindTexture(mode6TextGl.TEXTURE_2D, tex);
+    mode6TextGl.pixelStorei(mode6TextGl.UNPACK_FLIP_Y_WEBGL, 1);
+    mode6TextGl.texImage2D(
+      mode6TextGl.TEXTURE_2D,
+      0,
+      mode6TextGl.RGBA,
+      mode6TextGl.RGBA,
+      mode6TextGl.UNSIGNED_BYTE,
+      sourceCanvas,
+    );
+    mode6TextGl.texParameteri(mode6TextGl.TEXTURE_2D, mode6TextGl.TEXTURE_WRAP_S, mode6TextGl.CLAMP_TO_EDGE);
+    mode6TextGl.texParameteri(mode6TextGl.TEXTURE_2D, mode6TextGl.TEXTURE_WRAP_T, mode6TextGl.CLAMP_TO_EDGE);
+    mode6TextGl.texParameteri(mode6TextGl.TEXTURE_2D, mode6TextGl.TEXTURE_MIN_FILTER, mode6TextGl.LINEAR);
+    mode6TextGl.texParameteri(mode6TextGl.TEXTURE_2D, mode6TextGl.TEXTURE_MAG_FILTER, mode6TextGl.LINEAR);
+    mode6TextGl.bindTexture(mode6TextGl.TEXTURE_2D, null);
+    return tex;
+  }
+
+  function deleteMode6TextTexture(texture) {
+    if (!mode6TextGl || !texture) return;
+    mode6TextGl.deleteTexture(texture);
+  }
+
   function loadImageFromObjectUrl(url) {
     return new Promise((resolve, reject) => {
       const image = new Image();
@@ -1728,6 +2358,10 @@
       image.src = url;
     });
   }
+
+  applyPlay1EnvironmentSource(playMode1.environmentUrl).catch(() => {
+    clearPlay1EnvironmentResources();
+  });
 
   async function createPlayMode4ImageEntry(file) {
     if (!file || !String(file.type || "").startsWith("image/")) return null;
@@ -1840,8 +2474,6 @@
   const playDims = {
     lengthCurrent: state.frustumLengthSvg,
     diameterCurrent: state.frustumLargeDiameterSvg,
-    fitLengthCurrent: state.frustumLengthSvg,
-    fitDiameterCurrent: state.frustumLargeDiameterSvg,
     flowStartSec: 0,
     lengthFreq: 0.24,
     lengthPhase1: 0.8,
@@ -1857,16 +2489,16 @@
     spinMs: 1000,
     startYRad: -Math.PI / 2,
     yTurns: 1,
-    zoomZ: 70,
+    zoomZ: constants.defaultPlay6ZoomZ,
     zoomOutExtra: constants.defaultMode4ZoomOutExtra,
     zoomOutPeakPhase: 0.68,
     easeAmount: constants.defaultMode4Ease,
     imageMode: constants.defaultMode4ImageMode,
     spinStartRampPhase: 0.24,
-    expandedLengthSvg: constants.defaultMode4ExpandedLengthSvg,
+    expandedLengthSvg: constants.defaultFrustumLengthSvg,
     defaultScaleRatio:
       constants.defaultFrustumLargeDiameterSvg / constants.defaultFrustumLengthSvg,
-    lengthCurrent: constants.defaultMode4ExpandedLengthSvg,
+    lengthCurrent: constants.defaultFrustumLengthSvg,
     diameterCurrent: 0,
     pickXMinRad: (-80 * Math.PI) / 180,
     pickXMaxRad: (80 * Math.PI) / 180,
@@ -1909,6 +2541,21 @@
     lastShowOlab: false,
   };
 
+  const playMode6 = {
+    texts: [constants.defaultMode6Text],
+    entries: [],
+    activeIndex: 0,
+    holdFrontMs: 1350,
+    spinMs: 1900,
+    cycleStartMs: 0,
+    shapeAngleRad: 0,
+    currentTextAngleRad: 0,
+    nextTextAngleRad: NaN,
+    baseShapeWidthRatio: 0.24,
+    canvasShiftCssY: 0,
+    fillTextSize: false,
+  };
+
   function syncMode5CenterModeInput() {
     if (!mode5CenterModeSelect) return;
     const normalized = normalizeMode5CenterMode(playMode5.centerMode);
@@ -1925,11 +2572,18 @@
     }
   }
 
+  function syncMode6FillTextToggleInput() {
+    if (!mode6FillTextToggle) return;
+    if (document.activeElement !== mode6FillTextToggle) {
+      mode6FillTextToggle.checked = !!playMode6.fillTextSize;
+    }
+  }
+
   function setMode5CenterMode(value) {
     playMode5.centerMode = normalizeMode5CenterMode(value);
     syncMode5CenterModeInput();
     playMode5.centerFilterReady = false;
-    if (state.playMode === "play6" && playMode5.centerMode !== "full") {
+    if (state.playMode === "play7" && playMode5.centerMode !== "full") {
       stage.pos[0] = 0;
       stage.pos[1] = 0;
     }
@@ -1939,6 +2593,206 @@
     playMode5.stackMode = Boolean(value);
     syncMode5StackToggleInput();
     playMode5.centerFilterReady = false;
+  }
+
+  function setMode6FillTextSize(value) {
+    playMode6.fillTextSize = Boolean(value);
+    syncMode6FillTextToggleInput();
+    renderMode6TextCanvas();
+  }
+
+  function normalizeMode6Segments(value) {
+    const rawSegments = Array.isArray(value) ? value : [value];
+    const segments = rawSegments.map((segment) => String(segment ?? "").replace(/\r\n?/g, "\n"));
+    if (!segments.length || segments.every((segment) => !segment.trim())) {
+      return [constants.defaultMode6Text];
+    }
+    return segments;
+  }
+
+  function createMode6SegmentEditor(index, text, totalCount) {
+    const item = document.createElement("div");
+    item.className = "mode6-segment";
+
+    const header = document.createElement("div");
+    header.className = "mode6-segment-header";
+
+    const title = document.createElement("div");
+    title.className = "mode6-segment-title";
+    title.textContent = `Segment ${index + 1}`;
+    header.appendChild(title);
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "mode6-segment-remove";
+    removeButton.dataset.segmentIndex = String(index);
+    removeButton.textContent = "Remove";
+    removeButton.disabled = totalCount <= 1;
+    header.appendChild(removeButton);
+
+    const textarea = document.createElement("textarea");
+    textarea.className = "mode6-segment-input";
+    textarea.rows = 4;
+    textarea.placeholder = constants.defaultMode6Text;
+    textarea.dataset.segmentIndex = String(index);
+    textarea.value = text;
+
+    item.appendChild(header);
+    item.appendChild(textarea);
+    return item;
+  }
+
+  function getMode6TextCssColor() {
+    const raw = shapeColorInput && /^#([0-9a-f]{6})$/i.test(shapeColorInput.value)
+      ? shapeColorInput.value
+      : constants.defaultColorHex;
+    return raw;
+  }
+
+  function buildMode6TextEntry(text) {
+    const lines = String(text ?? "").replace(/\r\n?/g, "\n").split("\n");
+    const safeLines = lines.length ? lines : [""];
+    const baseFontPx = 256;
+    const lineHeightPx = baseFontPx * 0.84;
+    const paddingX = baseFontPx * 0.34;
+    const paddingTop = baseFontPx * 0.22;
+    const paddingBottom = baseFontPx * 0.18;
+    const measureCanvas = document.createElement("canvas");
+    const measureCtx = measureCanvas.getContext("2d");
+    measureCtx.font = `500 ${baseFontPx}px "Aeonik Fono", Arial, sans-serif`;
+    measureCtx.textAlign = "center";
+    measureCtx.textBaseline = "alphabetic";
+    const lineWidths = safeLines.map((line) => measureCtx.measureText(line || " ").width);
+    const maxLineWidth = Math.max(1, ...lineWidths);
+    const metrics = measureCtx.measureText("Mg");
+    const ascent = metrics.actualBoundingBoxAscent || baseFontPx * 0.76;
+    const descent = metrics.actualBoundingBoxDescent || baseFontPx * 0.22;
+    const logicalWidth = Math.ceil(maxLineWidth + paddingX * 2);
+    const logicalHeight = Math.ceil(
+      paddingTop + ascent + descent + Math.max(0, safeLines.length - 1) * lineHeightPx + paddingBottom,
+    );
+    const renderScale = 2;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(2, Math.ceil(logicalWidth * renderScale));
+    canvas.height = Math.max(2, Math.ceil(logicalHeight * renderScale));
+    const ctx = canvas.getContext("2d");
+    ctx.scale(renderScale, renderScale);
+    ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+    ctx.fillStyle = getMode6TextCssColor();
+    ctx.font = `500 ${baseFontPx}px "Aeonik Fono", Arial, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    let baselineY = paddingTop + ascent;
+    safeLines.forEach((line, index) => {
+      if (index > 0) baselineY += lineHeightPx;
+      ctx.fillText(line || " ", logicalWidth * 0.5, baselineY);
+    });
+    return {
+      text: String(text ?? ""),
+      canvas,
+      logicalWidth,
+      logicalHeight,
+      baseFontPx,
+      texture: createMode6TextTextureFromCanvas(canvas),
+    };
+  }
+
+  function syncMode6TextEntries() {
+    playMode6.entries.forEach((entry) => {
+      if (entry && entry.texture) {
+        deleteMode6TextTexture(entry.texture);
+      }
+    });
+    playMode6.entries = playMode6.texts.map((text) => buildMode6TextEntry(text));
+  }
+
+  function renderMode6SegmentsEditor(focusIndex = -1) {
+    if (!mode6SegmentsList) return;
+    mode6SegmentsList.innerHTML = "";
+    playMode6.texts.forEach((text, index) => {
+      mode6SegmentsList.appendChild(
+        createMode6SegmentEditor(index, text, playMode6.texts.length),
+      );
+    });
+    if (Number.isInteger(focusIndex) && focusIndex >= 0) {
+      const textarea = mode6SegmentsList.querySelector(
+        `.mode6-segment-input[data-segment-index="${focusIndex}"]`,
+      );
+      if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+      }
+    }
+  }
+
+  function setMode6Texts(value, options = {}) {
+    const nextTexts = normalizeMode6Segments(value);
+    playMode6.texts = nextTexts;
+    playMode6.activeIndex =
+      ((playMode6.activeIndex % playMode6.texts.length) + playMode6.texts.length) %
+      playMode6.texts.length;
+    if (options.render !== false) {
+      renderMode6SegmentsEditor(options.focusIndex);
+    }
+    syncMode6TextEntries();
+  }
+
+  function resetPlayMode6(nowMs) {
+    const now = Number.isFinite(nowMs) ? nowMs : performance.now();
+    const currentTexts = normalizeMode6Segments(playMode6.texts);
+    playMode6.cycleStartMs = now;
+    playMode6.activeIndex = 0;
+    playMode6.shapeAngleRad = 0;
+    playMode6.currentTextAngleRad = 0;
+    playMode6.nextTextAngleRad = NaN;
+    playMode6.baseShapeWidthRatio = 0.24;
+    playMode6.canvasShiftCssY = 0;
+    playMode6.fillTextSize = false;
+    setMode6Texts(currentTexts);
+  }
+
+  function computeMode6NeutralShapeMetrics() {
+    const previousRotX = stage.rotX;
+    const previousRotY = stage.rotY;
+    const previousRotZ = stage.rotZ;
+    const previousPosX = stage.pos[0];
+    const previousPosY = stage.pos[1];
+    stage.rotX = 0;
+    stage.rotY = 0;
+    stage.rotZ = 0;
+    stage.pos[0] = 0;
+    stage.pos[1] = 0;
+    const metrics = computeShapeProjectedMetrics();
+    stage.rotX = previousRotX;
+    stage.rotY = previousRotY;
+    stage.rotZ = previousRotZ;
+    stage.pos[0] = previousPosX;
+    stage.pos[1] = previousPosY;
+    return metrics;
+  }
+
+  function captureMode6BaseShapeMetrics() {
+    const metrics = computeMode6NeutralShapeMetrics();
+    const rect = frame.getBoundingClientRect();
+    if (!metrics || canvas.width < 2 || rect.width < 2 || rect.height < 2) return;
+    playMode6.baseShapeWidthRatio = clamp(
+      metrics.boundsWidthPx / Math.max(1, canvas.width),
+      0.08,
+      0.8,
+    );
+    const topPaddingCss = Math.min(rect.width, rect.height) * constants.defaultMode6TopPaddingRatio;
+    const topCss =
+      (metrics.centerY - metrics.boundsHeightPx * 0.5) *
+      (rect.height / Math.max(1, canvas.height));
+    playMode6.canvasShiftCssY = topPaddingCss - topCss;
+  }
+
+  function refreshMode6BaseLayout() {
+    if (state.playMode !== "play5") return;
+    captureMode6BaseShapeMetrics();
+    updateMode6CanvasTransform();
+    updateMode6TextOrbit();
+    updateMode6OlabTransform();
   }
 
   function randomRange(min, max) {
@@ -1962,7 +2816,7 @@
   }
 
   function setupPlayYSpin(mode) {
-    const base = mode === "play4" ? 0.84 : 0.96;
+    const base = mode === "play5" ? 0.84 : 0.96;
     playMotion.yBaseSpeed = base;
     playMotion.yFreq1 = randomRange(0.42, 0.9);
     playMotion.yFreq2 = randomRange(0.95, 1.9);
@@ -1976,6 +2830,14 @@
       Math.sin(tSec * playMotion.yFreq1 + playMotion.yPhase1) * 0.24 +
       Math.sin(tSec * playMotion.yFreq2 + playMotion.yPhase2) * 0.11;
     return clamp(playMotion.yBaseSpeed + wobble, 0.28, 1.95);
+  }
+
+  function applyPlay2State(dt) {
+    stage.rotX = 0;
+    stage.rotZ = 0;
+    stage.rotY += constants.defaultPlay2SpinYSpeed * dt;
+    stage.pos[0] = 0;
+    stage.pos[1] = 0;
   }
 
   function schedulePlayTargets(nowMs) {
@@ -1998,6 +2860,25 @@
     playDims.diameterFreq = randomRange(0.22, 0.42);
     playDims.diameterPhase1 = randomRange(0, Math.PI * 2);
     playDims.diameterPhase2 = randomRange(0, Math.PI * 2);
+  }
+
+  function resetPlayMode4ToInitialState(nowMs) {
+    const now = Number.isFinite(nowMs) ? nowMs : performance.now();
+    playMode4.phase = "hold";
+    playMode4.phaseStartMs = now;
+    playMode4.startYRad = -Math.PI / 2;
+    playMode4.zoomZ = constants.defaultPlay6ZoomZ;
+    playMode4.expandedLengthSvg = constants.defaultFrustumLengthSvg;
+    playMode4.lengthCurrent = constants.defaultFrustumLengthSvg;
+    playMode4.diameterCurrent = constants.defaultFrustumLargeDiameterSvg;
+    playMode4.baseGreenActive = true;
+    playMode4.photoSwitchedInSpin = false;
+    playMode4.fixedXRad = 0;
+    playMode4.fixedZRad = 0;
+    playMode4.holdFromXRad = 0;
+    playMode4.holdFromZRad = 0;
+    playMode4.nextXRad = 0;
+    playMode4.nextZRad = 0;
   }
 
   function setMode5LabAngle(primaryRad, secondaryRad) {
@@ -2052,6 +2933,240 @@
       setMode5OlabInstanceVisible(mode5OlabSecondary, false);
     }
     syncMode5OlabFrameState();
+  }
+
+  function setMode6Visible(visible) {
+    if (frame) {
+      frame.classList.toggle("mode6-text-active", !!visible);
+    }
+    if (canvas && !visible) {
+      canvas.style.transform = "none";
+    }
+    mode6TextLayers.forEach((layer) => {
+      if (!layer || !layer.orbit) return;
+      layer.orbit.style.display = "none";
+      layer.orbit.setAttribute("aria-hidden", "true");
+    });
+    if (mode6TextCanvas) {
+      mode6TextCanvas.style.display = visible ? "block" : "none";
+    }
+    if (!visible) {
+      clearMode6TextCanvas();
+    }
+    if (mode6OlabInstance && mode6OlabInstance.wrap) {
+      mode6OlabInstance.wrap.style.display = visible ? "block" : "none";
+      mode6OlabInstance.wrap.setAttribute("aria-hidden", visible ? "false" : "true");
+    }
+  }
+
+  function updateMode6CanvasTransform() {
+    if (!canvas) return;
+    if (state.playMode !== "play5") {
+      canvas.style.transform = "none";
+      return;
+    }
+    const shiftCssY = Number.isFinite(playMode6.canvasShiftCssY) ? playMode6.canvasShiftCssY : 0;
+    canvas.style.transform = `translate3d(0, ${shiftCssY.toFixed(3)}px, 0)`;
+  }
+
+  function updateMode6OlabTransform() {
+    if (state.playMode !== "play5" || !mode6OlabInstance || !mode6OlabInstance.wrap) {
+      if (mode6OlabInstance && mode6OlabInstance.wrap) {
+        mode6OlabInstance.wrap.style.display = "none";
+      }
+      return;
+    }
+    const rect = frame.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return;
+    const shorterSide = Math.min(rect.width, rect.height);
+    const bottomPadding = shorterSide * constants.defaultMode6BottomPaddingRatio;
+    const widthCss = clamp(
+      rect.width * playMode6.baseShapeWidthRatio,
+      88,
+      Math.min(rect.width * 0.5, 220),
+    );
+    const heightCss =
+      widthCss * (constants.mode5OlabViewHeightSvg / constants.mode5OlabViewWidthSvg);
+    const left = (rect.width - widthCss) * 0.5;
+    const top = rect.height - bottomPadding - heightCss;
+    const olabCenterX = (constants.mode5OlabOCenterXSvg / constants.mode5OlabViewWidthSvg) * widthCss;
+    const olabCenterY = (constants.mode5OlabOCenterYSvg / constants.mode5OlabViewHeightSvg) * heightCss;
+
+    mode6OlabInstance.wrap.style.left = `${left}px`;
+    mode6OlabInstance.wrap.style.top = `${top}px`;
+    mode6OlabInstance.wrap.style.width = `${widthCss}px`;
+    mode6OlabInstance.wrap.style.height = `${heightCss}px`;
+    mode6OlabInstance.wrap.style.transformOrigin = `${olabCenterX}px ${olabCenterY}px`;
+    mode6OlabInstance.wrap.style.transform = "none";
+    mode6OlabInstance.wrap.style.display = "block";
+  }
+
+  function hideMode6TextLayers() {
+    mode6TextLayers.forEach((layer) => {
+      if (!layer || !layer.orbit) return;
+      layer.orbit.style.display = "none";
+    });
+  }
+
+  function clearMode6TextCanvas() {
+    if (!mode6TextGl || !mode6TextCanvas) return;
+    mode6TextGl.viewport(0, 0, mode6TextCanvas.width, mode6TextCanvas.height);
+    mode6TextGl.clearColor(0, 0, 0, 0);
+    mode6TextGl.clear(mode6TextGl.COLOR_BUFFER_BIT);
+  }
+
+  function resizeMode6TextCanvas() {
+    if (!mode6TextCanvas) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = frame.getBoundingClientRect();
+    mode6TextCanvas.width = Math.max(2, Math.floor(rect.width * dpr));
+    mode6TextCanvas.height = Math.max(2, Math.floor(rect.height * dpr));
+    clearMode6TextCanvas();
+  }
+
+  function toMode6OverlayPoint(screen) {
+    const rect = frame.getBoundingClientRect();
+    return {
+      x: screen.x * (rect.width / Math.max(1, canvas.width)),
+      y: screen.y * (rect.height / Math.max(1, canvas.height)),
+      depth: screen.depth,
+    };
+  }
+
+  function lerpPoint2(a, b, t) {
+    return {
+      x: a.x + (b.x - a.x) * t,
+      y: a.y + (b.y - a.y) * t,
+    };
+  }
+
+  function getMode6EntryProjection(entry, orbitAngle, fontSizeCss) {
+    const rect = frame.getBoundingClientRect();
+    if (!entry || rect.width < 2 || rect.height < 2) return null;
+    const referenceDepth = Math.max(0.001, getActiveCameraZ() * 0.58);
+    const worldPerCss = getWorldUnitsPerCssPixelAtDepth(referenceDepth, rect.width, rect.height);
+    const widthCss = entry.logicalWidth * (fontSizeCss / entry.baseFontPx);
+    const heightCss = entry.logicalHeight * (fontSizeCss / entry.baseFontPx);
+    const widthWorld = widthCss * worldPerCss.x;
+    const heightWorld = heightCss * worldPerCss.y;
+    const orbitDistance =
+      rect.width * constants.defaultMode6TextOrbitDistanceFrameWidthRatio * worldPerCss.x;
+    const safeOrbitAngle = clamp(orbitAngle, -Math.PI * 0.4, Math.PI * 0.4);
+    const activeCameraZ = getActiveCameraZ();
+    const textWorld = rotateY3(0, 0, -orbitDistance, -safeOrbitAngle);
+    textWorld[2] += activeCameraZ;
+    const lookDir = normalizeVec3([-textWorld[0], 0, activeCameraZ - textWorld[2]]);
+    const upDir = [0, 1, 0];
+    const rightDir = normalizeVec3(cross3(upDir, lookDir));
+    const halfW = widthWorld * 0.5;
+    const halfH = heightWorld * 0.5;
+    const topLeftWorld = addScaled3(addScaled3(textWorld, rightDir, -halfW), upDir, halfH);
+    const topRightWorld = addScaled3(addScaled3(textWorld, rightDir, halfW), upDir, halfH);
+    const bottomLeftWorld = addScaled3(addScaled3(textWorld, rightDir, -halfW), upDir, -halfH);
+    const bottomRightWorld = addScaled3(addScaled3(textWorld, rightDir, halfW), upDir, -halfH);
+    const topLeft = projectWorldToScreen(topLeftWorld, canvas.width, canvas.height, state.cameraZ);
+    const topRight = projectWorldToScreen(topRightWorld, canvas.width, canvas.height, state.cameraZ);
+    const bottomLeft = projectWorldToScreen(bottomLeftWorld, canvas.width, canvas.height, state.cameraZ);
+    const bottomRight = projectWorldToScreen(bottomRightWorld, canvas.width, canvas.height, state.cameraZ);
+    if (!topLeft || !topRight || !bottomLeft || !bottomRight) return null;
+    const tl = toMode6OverlayPoint(topLeft);
+    const tr = toMode6OverlayPoint(topRight);
+    const bl = toMode6OverlayPoint(bottomLeft);
+    const br = toMode6OverlayPoint(bottomRight);
+    const minX = Math.min(tl.x, tr.x, bl.x, br.x);
+    const maxX = Math.max(tl.x, tr.x, bl.x, br.x);
+    const minY = Math.min(tl.y, tr.y, bl.y, br.y);
+    const maxY = Math.max(tl.y, tr.y, bl.y, br.y);
+    return {
+      tl,
+      tr,
+      bl,
+      br,
+      topLeftWorld,
+      topRightWorld,
+      bottomLeftWorld,
+      bottomRightWorld,
+      boundsWidthCss: Math.max(1, maxX - minX),
+      boundsHeightCss: Math.max(1, maxY - minY),
+    };
+  }
+
+  function drawMode6ProjectedTextEntry(entry, orbitAngle) {
+    if (!mode6TextGl || !mode6TextCanvas || !mode6TextProgram || !mode6TextQuadBuffer) return;
+    if (!entry || !entry.canvas || !entry.texture) return;
+    const rect = frame.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return;
+    const shorterSide = Math.min(rect.width, rect.height);
+    const baseFontSizeCss = clamp(
+      rect.width * constants.defaultMode6TextFontSizeRatio,
+      22,
+      96,
+    );
+    let fontSizeCss = baseFontSizeCss;
+    if (playMode6.fillTextSize) {
+      const frontProjection = getMode6EntryProjection(entry, 0, baseFontSizeCss);
+      if (frontProjection) {
+        const frontMaxDimension = Math.max(
+          frontProjection.boundsWidthCss,
+          frontProjection.boundsHeightCss,
+        );
+        fontSizeCss = baseFontSizeCss * (shorterSide / Math.max(1, frontMaxDimension));
+      }
+    }
+    const projection = getMode6EntryProjection(entry, orbitAngle, fontSizeCss);
+    if (!projection) return;
+    const {
+      topLeftWorld,
+      topRightWorld,
+      bottomLeftWorld,
+      bottomRightWorld,
+    } = projection;
+    const vertexData = new Float32Array([
+      topLeftWorld[0], topLeftWorld[1], topLeftWorld[2], 0, 0,
+      topRightWorld[0], topRightWorld[1], topRightWorld[2], 1, 0,
+      bottomLeftWorld[0], bottomLeftWorld[1], bottomLeftWorld[2], 0, 1,
+      bottomRightWorld[0], bottomRightWorld[1], bottomRightWorld[2], 1, 1,
+    ]);
+    mode6TextGl.useProgram(mode6TextProgram);
+    mode6TextGl.bindBuffer(mode6TextGl.ARRAY_BUFFER, mode6TextQuadBuffer);
+    mode6TextGl.bufferData(mode6TextGl.ARRAY_BUFFER, vertexData, mode6TextGl.DYNAMIC_DRAW);
+    mode6TextGl.vertexAttribPointer(mode6TextAttribWorldPos, 3, mode6TextGl.FLOAT, false, 20, 0);
+    mode6TextGl.enableVertexAttribArray(mode6TextAttribWorldPos);
+    mode6TextGl.vertexAttribPointer(mode6TextAttribUv, 2, mode6TextGl.FLOAT, false, 20, 12);
+    mode6TextGl.enableVertexAttribArray(mode6TextAttribUv);
+    mode6TextGl.uniform1f(mode6TextUniformAspect, mode6TextCanvas.width / Math.max(1, mode6TextCanvas.height));
+    mode6TextGl.uniform1f(mode6TextUniformFov, getPerspectiveFovRad());
+    mode6TextGl.uniform1f(mode6TextUniformCameraZ, getActiveCameraZ());
+    mode6TextGl.activeTexture(mode6TextGl.TEXTURE0);
+    mode6TextGl.bindTexture(mode6TextGl.TEXTURE_2D, entry.texture);
+    mode6TextGl.uniform1i(mode6TextUniformTexture, 0);
+    mode6TextGl.drawArrays(mode6TextGl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  function renderMode6TextCanvas() {
+    clearMode6TextCanvas();
+    hideMode6TextLayers();
+    if (state.playMode !== "play5" || !mode6TextGl) return;
+    mode6TextGl.viewport(0, 0, mode6TextCanvas.width, mode6TextCanvas.height);
+    mode6TextGl.disable(mode6TextGl.DEPTH_TEST);
+    mode6TextGl.enable(mode6TextGl.BLEND);
+    const entries = playMode6.entries.length ? playMode6.entries : [buildMode6TextEntry(constants.defaultMode6Text)];
+    const currentIndex =
+      ((playMode6.activeIndex % entries.length) + entries.length) % entries.length;
+    const nextIndex = (currentIndex + 1) % entries.length;
+    drawMode6ProjectedTextEntry(entries[currentIndex], playMode6.currentTextAngleRad);
+    if (Number.isFinite(playMode6.nextTextAngleRad)) {
+      drawMode6ProjectedTextEntry(entries[nextIndex], playMode6.nextTextAngleRad);
+    }
+  }
+
+  function updateMode6TextLayer(layer, text, orbitAngle) {
+    if (!layer || !layer.orbit) return;
+    layer.orbit.style.display = "none";
+  }
+
+  function updateMode6TextOrbit() {
+    renderMode6TextCanvas();
   }
 
   function getMode5StackHalfOffsetCssFromSphereDiameter(sphereDiameterCss) {
@@ -2220,10 +3335,10 @@
 
   function updateMode5OlabTransform() {
     if (!mode5OlabPrimary.wrap || !mode5OlabPrimary.svg) return;
-    const isPlay6 = state.playMode === "play6";
-    const isStackMode = isPlay6 && playMode5.stackMode;
-    const showPrimary = isPlay6 && playMode5.showOlab;
-    const showSecondary = isPlay6 && isStackMode && !playMode5.showOlab;
+    const isPlay7 = state.playMode === "play7";
+    const isStackMode = isPlay7 && playMode5.stackMode;
+    const showPrimary = isPlay7 && playMode5.showOlab;
+    const showSecondary = isPlay7 && isStackMode && !playMode5.showOlab;
     if (!showPrimary && !showSecondary) {
       setMode5OlabVisible(false);
       return;
@@ -2253,7 +3368,7 @@
     const stackHalfOffsetWorld = isStackMode
       ? getMode5StackHalfOffsetWorld(rect, sphereDiameterCss)
       : 0;
-    const isFullCenterMode = isPlay6 && playMode5.centerMode === "full";
+    const isFullCenterMode = isPlay7 && playMode5.centerMode === "full";
 
     if (showPrimary) {
       updateMode5OlabInstanceTransform(mode5OlabPrimary, rect, {
@@ -2372,6 +3487,84 @@
     };
   }
 
+  function computeShapeProjectedMetrics() {
+    const width = Math.max(2, canvas.width);
+    const height = Math.max(2, canvas.height);
+    const stats = {
+      minX: Infinity,
+      maxX: -Infinity,
+      minY: Infinity,
+      maxY: -Infinity,
+      depthSum: 0,
+      count: 0,
+    };
+
+    accumulateProjectedStats(
+      mode5SphereCenterPositions,
+      sphereObject,
+      width,
+      height,
+      state.cameraZ,
+      1,
+      stats,
+    );
+    accumulateProjectedStats(
+      frustumLocalPositions,
+      frustumObject,
+      width,
+      height,
+      state.cameraZ,
+      1,
+      stats,
+    );
+    accumulateProjectedStats(
+      frustumCapLocalPositions,
+      frustumLargeBaseObject,
+      width,
+      height,
+      state.cameraZ,
+      1,
+      stats,
+    );
+
+    if (
+      stats.count < 20 ||
+      !Number.isFinite(stats.minX) ||
+      !Number.isFinite(stats.maxX) ||
+      !Number.isFinite(stats.minY) ||
+      !Number.isFinite(stats.maxY)
+    ) {
+      return null;
+    }
+
+    return {
+      width,
+      height,
+      centerX: (stats.minX + stats.maxX) * 0.5,
+      centerY: (stats.minY + stats.maxY) * 0.5,
+      boundsWidthPx: Math.max(1, stats.maxX - stats.minX),
+      boundsHeightPx: Math.max(1, stats.maxY - stats.minY),
+      depth: Math.max(0.25, stats.depthSum / Math.max(1, stats.count)),
+    };
+  }
+
+  function computeShapeProjectedOffsetWorld(targetCenterX, targetCenterY, metrics) {
+    const safeMetrics = metrics || computeShapeProjectedMetrics();
+    if (!safeMetrics) {
+      return { x: 0, y: 0 };
+    }
+    const deltaPxX = targetCenterX - safeMetrics.centerX;
+    const deltaPxY = targetCenterY - safeMetrics.centerY;
+    const aspect = safeMetrics.width / safeMetrics.height;
+    const f = 1 / Math.tan(getPerspectiveFovRad() * 0.5);
+    const worldPerPixelX = (2 * safeMetrics.depth * aspect) / (safeMetrics.width * f);
+    const worldPerPixelY = (2 * safeMetrics.depth) / (safeMetrics.height * f);
+    return {
+      x: clamp(deltaPxX * worldPerPixelX, -48, 48),
+      y: clamp(-deltaPxY * worldPerPixelY, -48, 48),
+    };
+  }
+
   function applyPlayMode5State(timeMs) {
     const spinMs = Math.max(300, playMode5.spinMs);
     let elapsed = Math.max(0, timeMs - playMode5.phaseStartMs);
@@ -2436,6 +3629,44 @@
     setMode5LabAngle(angle, playMode5.stackMode ? -angle : angle);
   }
 
+  function applyPlayMode6State(timeMs) {
+    const cycleMs =
+      Math.max(1, playMode6.holdFrontMs) +
+      Math.max(1, playMode6.spinMs);
+    let elapsed = Math.max(0, timeMs - playMode6.cycleStartMs);
+    while (elapsed >= cycleMs) {
+      elapsed -= cycleMs;
+      playMode6.cycleStartMs = timeMs - elapsed;
+      playMode6.activeIndex =
+        (playMode6.activeIndex + 1) % Math.max(1, playMode6.texts.length);
+    }
+
+    let shapeAngle = 0;
+    let currentTextAngle = 0;
+    let nextTextAngle = NaN;
+    if (elapsed > playMode6.holdFrontMs) {
+      const spinElapsed = elapsed - playMode6.holdFrontMs;
+      const progress = clamp(spinElapsed / Math.max(1, playMode6.spinMs), 0, 1);
+      const eased = easeInOutStrong01(progress);
+      const orbitTravel = Math.PI * 0.5 * eased;
+      shapeAngle = -Math.PI * 2 * eased;
+      currentTextAngle = orbitTravel;
+      nextTextAngle = orbitTravel - Math.PI * 0.5;
+    }
+
+    playMode6.shapeAngleRad = shapeAngle;
+    playMode6.currentTextAngleRad = currentTextAngle;
+    playMode6.nextTextAngleRad = nextTextAngle;
+    stage.rotX = 0;
+    stage.rotY = shapeAngle;
+    stage.rotZ = 0;
+    stage.pos[0] = 0;
+    stage.pos[1] = 0;
+    updateMode6CanvasTransform();
+    updateMode6TextOrbit();
+    updateMode6OlabTransform();
+  }
+
   function applyPlayMode4State(timeMs) {
     const expandedLength = playMode4.expandedLengthSvg;
     const expandedDiameter = playMode4.expandedLengthSvg * playMode4.defaultScaleRatio;
@@ -2469,28 +3700,10 @@
     if (playMode4.phase === "spin") {
       const spinElapsed = Math.max(0, timeMs - playMode4.phaseStartMs);
       const spinProgress = clamp(spinElapsed / Math.max(1, playMode4.spinMs), 0, 1);
-      const spinProgressRamped = applyMode4SpinStartRamp(spinProgress);
-      const easedSpin = applyMode4Ease01(spinProgressRamped);
+      const easedSpin = applyMode4Ease01(spinProgress);
       nextY = playMode4.startYRad - Math.PI * 2 * playMode4.yTurns * easedSpin;
 
-      // Zoom motion in spin:
-      // hold steady before spin, then move away, then come back near the end.
-      const peakPhase = clamp(playMode4.zoomOutPeakPhase, 0.35, 0.9);
-      let zoomBlend = 0;
-      if (spinProgressRamped <= peakPhase) {
-        zoomBlend = applyMode4Ease01(spinProgressRamped / Math.max(0.001, peakPhase));
-      } else {
-        zoomBlend =
-          1 -
-          applyMode4Ease01(
-            (spinProgressRamped - peakPhase) / Math.max(0.001, 1 - peakPhase),
-          );
-      }
-      nextCameraZ = clamp(
-        playMode4.zoomZ + playMode4.zoomOutExtra * zoomBlend,
-        constants.minCameraZ,
-        constants.maxCameraZ,
-      );
+      nextCameraZ = playMode4.zoomZ;
 
       // Green only near start/end; middle interval (side-facing) returns to original color.
       baseGreenActive = easedSpin <= 0.125 || easedSpin >= 0.875;
@@ -2619,20 +3832,15 @@
     event.preventDefault();
   });
 
-  canvas.addEventListener(
-    "wheel",
-    (event) => {
-      event.preventDefault();
-      state.cameraZ = clamp(
-        state.cameraZ + event.deltaY * 0.03,
-        constants.minCameraZ,
-        constants.maxCameraZ,
-      );
-      updateCameraUniforms();
-      syncZoomInputs();
-    },
-    { passive: false },
-  );
+  function handleZoomWheel(event) {
+    event.preventDefault();
+    setCameraZoom(state.cameraZ + event.deltaY * 0.03);
+  }
+
+  canvas.addEventListener("wheel", handleZoomWheel, { passive: false });
+  if (frame) {
+    frame.addEventListener("wheel", handleZoomWheel, { passive: false });
+  }
 
   let isResizingFrame = false;
   let resizeStartX = 0;
@@ -2691,6 +3899,56 @@
     });
   }
 
+  if (play1EnvironmentToggle) {
+    play1EnvironmentToggle.addEventListener("change", () => {
+      playMode1.environmentEnabled = play1EnvironmentToggle.checked;
+      syncPlay1EnvironmentToggle();
+      updatePlay1EnvironmentVisual();
+    });
+  }
+
+  if (play1EnvironmentInput) {
+    play1EnvironmentInput.addEventListener("change", async () => {
+      const file = play1EnvironmentInput.files && play1EnvironmentInput.files[0];
+      if (!file) return;
+      let result;
+      try {
+        result = await setPlay1EnvironmentFromFile(file);
+      } catch (error) {
+        result = { ok: false, reason: "exr-runtime" };
+      }
+      if (result.ok) {
+        playMode1.environmentEnabled = true;
+        syncPlay1EnvironmentToggle();
+      }
+      copyStatus.textContent = result.ok
+        ? (result.source === "exr"
+            ? "360 EXR environment converted and loaded."
+            : "360 environment photo loaded.")
+        : result.reason === "unsupported"
+          ? "Selected file is not an image or EXR."
+          : result.reason === "exr-runtime"
+            ? "EXR parser failed to load. Check network once, then try again."
+            : "Environment image load failed.";
+      if (!result.ok) {
+        play1EnvironmentInput.value = "";
+      }
+      updatePlay1EnvironmentVisual();
+    });
+  }
+
+  if (clearPlay1EnvironmentButton) {
+    clearPlay1EnvironmentButton.addEventListener("click", async () => {
+      try {
+        await clearPlay1EnvironmentCustomPhoto();
+        copyStatus.textContent = "Environment photo cleared.";
+      } catch (error) {
+        copyStatus.textContent = "Built-in environment reload failed.";
+      }
+      updatePlay1EnvironmentVisual();
+    });
+  }
+
   if (mode5StackToggle) {
     mode5StackToggle.addEventListener("change", () => {
       setMode5StackMode(mode5StackToggle.checked);
@@ -2709,33 +3967,22 @@
     stage.pos[1] = 0;
     const now = performance.now();
     setMode5OlabVisible(false);
+    setMode6Visible(false);
     playMode5.showOlab = false;
-    if (state.playMode === "play5") {
-      playMode4.phase = "hold";
-      playMode4.phaseStartMs = now;
-      playMode4.lengthCurrent = playMode4.expandedLengthSvg;
-      playMode4.diameterCurrent = playMode4.expandedLengthSvg * playMode4.defaultScaleRatio;
-      playMode4.baseGreenActive = true;
-      playMode4.photoSwitchedInSpin = false;
-      playMode4.fixedXRad = 0;
-      playMode4.fixedZRad = 0;
-      playMode4.holdFromXRad = 0;
-      playMode4.holdFromZRad = 0;
-      playMode4.nextXRad = randomMode4TiltX();
-      playMode4.nextZRad = randomMode4TiltZ();
+    if (state.playMode === "play6") {
+      resetPlayMode4ToInitialState(now);
+      setPerspectiveFov(constants.defaultPlay6PerspectiveFovDeg);
       stage.rotX = 0;
       stage.rotY = playMode4.startYRad;
       stage.rotZ = 0;
       stage.pos[1] = 0;
-      state.cameraZ = playMode4.zoomZ;
-      updateCameraUniforms();
-      syncZoomInputs();
+      setCameraZoom(playMode4.zoomZ);
       syncMode4ExpandedLengthInput();
       syncMode4MotionInputs();
       rebuildFrustumFor(playMode4.lengthCurrent, playMode4.diameterCurrent);
       return;
     }
-    if (state.playMode === "play6") {
+    if (state.playMode === "play7") {
       resetPlayMode5(now);
       stage.rotX = playMode5.fixedXRad;
       stage.rotY = 0;
@@ -2745,10 +3992,29 @@
       rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
       return;
     }
+    if (state.playMode === "play5") {
+      resetPlayMode6(now);
+      stage.rotX = 0;
+      stage.rotY = 0;
+      stage.rotZ = 0;
+      stage.pos[0] = 0;
+      stage.pos[1] = 0;
+      setMode6Visible(true);
+      setPerspectiveFov(constants.defaultPlay6PerspectiveFovDeg);
+      setCameraZoom(constants.defaultMode6CameraZ);
+      rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
+      refreshMode6BaseLayout();
+      return;
+    }
+    if (state.playMode === "play2") {
+      stage.rotX = 0;
+      stage.rotY = 0;
+      stage.rotZ = 0;
+      rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
+      return;
+    }
     if (
       state.playMode === "play1" ||
-      state.playMode === "play2" ||
-      state.playMode === "play3" ||
       state.playMode === "play4"
     ) {
       setupPlayYSpin(state.playMode);
@@ -2756,39 +4022,12 @@
     }
     if (
       state.playMode === "play1" ||
-      state.playMode === "play2" ||
-      state.playMode === "play3"
+      state.playMode === "play4"
     ) {
       schedulePlayOrbitTargets(now);
-    } else if (state.playMode === "play4") {
-      schedulePlayTargets(now);
-    }
-    if (state.playMode === "play2") {
-      const play2MinLength = Math.max(
-        constants.minLengthSvg,
-        constants.minLargeDiameterSvg / constants.playMode2MaxDiameterToLengthRatio,
-      );
-      playDims.lengthCurrent = Math.max(state.frustumLengthSvg, play2MinLength);
-      playDims.diameterCurrent = clamp(
-        state.frustumLargeDiameterSvg,
-        constants.minLargeDiameterSvg,
-        Math.min(
-          constants.maxLargeDiameterSvg,
-          playDims.lengthCurrent * constants.playMode2MaxDiameterToLengthRatio,
-        ),
-      );
-      schedulePlayDimensionTargets(now);
-      rebuildFrustumFor(playDims.lengthCurrent, playDims.diameterCurrent);
-      return;
-    }
-    if (state.playMode === "play3") {
-      rebuildFrustumFor(constants.fixedPlay3LengthSvg, getFixedPlay3DiameterSvg());
-      return;
     }
     if (state.playMode === "play4") {
-      playDims.fitLengthCurrent = state.frustumLengthSvg;
-      playDims.fitDiameterCurrent = state.frustumLargeDiameterSvg;
-      rebuildFrustumFor(playDims.fitLengthCurrent, playDims.fitDiameterCurrent);
+      rebuildFrustumFor(constants.fixedPlay3LengthSvg, getFixedPlay3DiameterSvg());
       return;
     }
     rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
@@ -2829,25 +4068,11 @@
   });
 
   zoomRange.addEventListener("input", () => {
-    state.cameraZ = clamp(
-      Number(zoomRange.value),
-      constants.minCameraZ,
-      constants.maxCameraZ,
-    );
-    updateCameraUniforms();
-    syncZoomInputs();
+    setCameraZoom(zoomRange.value);
   });
 
   zoomNumber.addEventListener("input", () => {
-    const raw = Number(zoomNumber.value);
-    if (!Number.isFinite(raw)) return;
-    state.cameraZ = clamp(
-      raw,
-      constants.minCameraZ,
-      constants.maxCameraZ,
-    );
-    updateCameraUniforms();
-    syncZoomInputs();
+    setCameraZoom(zoomNumber.value);
   });
 
   zoomNumber.addEventListener("blur", () => {
@@ -2908,6 +4133,50 @@
     });
   }
 
+  if (mode6SegmentsList) {
+    mode6SegmentsList.addEventListener("input", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLTextAreaElement)) return;
+      const index = Number(target.dataset.segmentIndex);
+      if (!Number.isInteger(index) || index < 0 || index >= playMode6.texts.length) return;
+      playMode6.texts[index] = String(target.value ?? "").replace(/\r\n?/g, "\n");
+      if (playMode6.entries[index] && playMode6.entries[index].texture) {
+        deleteMode6TextTexture(playMode6.entries[index].texture);
+      }
+      playMode6.entries[index] = buildMode6TextEntry(playMode6.texts[index]);
+      renderMode6TextCanvas();
+    });
+    mode6SegmentsList.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const removeButton = target.closest(".mode6-segment-remove");
+      if (!removeButton) return;
+      const index = Number(removeButton.dataset.segmentIndex);
+      if (!Number.isInteger(index) || playMode6.texts.length <= 1) return;
+      const nextTexts = playMode6.texts.slice();
+      nextTexts.splice(index, 1);
+      setMode6Texts(nextTexts, {
+        focusIndex: Math.max(0, Math.min(index, nextTexts.length - 1)),
+      });
+      updateMode6TextOrbit();
+    });
+  }
+
+  if (mode6AddSegmentButton) {
+    mode6AddSegmentButton.addEventListener("click", () => {
+      const nextTexts = playMode6.texts.slice();
+      nextTexts.push("");
+      setMode6Texts(nextTexts, { focusIndex: nextTexts.length - 1 });
+      updateMode6TextOrbit();
+    });
+  }
+
+  if (mode6FillTextToggle) {
+    mode6FillTextToggle.addEventListener("change", () => {
+      setMode6FillTextSize(mode6FillTextToggle.checked);
+    });
+  }
+
   if (frameBgColorInput) {
     frameBgColorInput.addEventListener("input", () => {
       applyFrameBackgroundColor(frameBgColorInput.value);
@@ -2957,8 +4226,8 @@
     const added = await appendPlayMode4Images(files);
     copyStatus.textContent =
       added > 0
-        ? `${added} image${added > 1 ? "s" : ""} added for play mode 5 mask.`
-        : "No valid images were added for play mode 5 mask.";
+        ? `${added} image${added > 1 ? "s" : ""} added for play mode 4 mask.`
+        : "No valid images were added for play mode 4 mask.";
     mode4ImagesInput.value = "";
   });
 
@@ -2972,7 +4241,7 @@
     if (action === "delete") {
       const removed = deletePlayMode4ImageAt(index);
       copyStatus.textContent = removed
-        ? "Image removed from play mode 5 mask."
+        ? "Image removed from play mode 4 mask."
         : "Image remove failed.";
       return;
     }
@@ -2990,7 +4259,7 @@
     if (!file) return;
     const ok = await replacePlayMode4ImageAt(pendingMode4ReplaceIndex, file);
     copyStatus.textContent = ok
-      ? "Image replaced for play mode 5 mask."
+      ? "Image replaced for play mode 4 mask."
       : "Image replace failed.";
     pendingMode4ReplaceIndex = -1;
     mode4ReplaceInput.value = "";
@@ -2998,10 +4267,11 @@
 
   clearMode4ImagesButton.addEventListener("click", () => {
     clearPlayMode4Images();
-    copyStatus.textContent = "Play mode 5 mask images cleared.";
+    copyStatus.textContent = "Play mode 4 mask images cleared.";
   });
 
   window.addEventListener("beforeunload", () => {
+    clearPlay1EnvironmentResources();
     clearFrameImage(true);
     clearPlayMode4Images(true);
   });
@@ -3018,6 +4288,7 @@
     state.frameBgColor = constants.defaultFrameBgColor;
     state.depthBlur = false;
     state.depthDynamic = false;
+    playMode1.environmentEnabled = constants.defaultPlay1EnvironmentEnabled;
 
     stage.pos[0] = 0;
     stage.pos[1] = 0;
@@ -3034,30 +4305,18 @@
     state.playMode = "off";
     playDims.lengthCurrent = state.frustumLengthSvg;
     playDims.diameterCurrent = state.frustumLargeDiameterSvg;
-    playDims.fitLengthCurrent = state.frustumLengthSvg;
-    playDims.fitDiameterCurrent = state.frustumLargeDiameterSvg;
-    playMode4.phase = "hold";
-    playMode4.phaseStartMs = performance.now();
-    playMode4.expandedLengthSvg = constants.defaultMode4ExpandedLengthSvg;
+    resetPlayMode4ToInitialState(performance.now());
     playMode4.zoomOutExtra = constants.defaultMode4ZoomOutExtra;
     playMode4.easeAmount = constants.defaultMode4Ease;
     playMode4.imageMode = constants.defaultMode4ImageMode;
-    playMode4.lengthCurrent = playMode4.expandedLengthSvg;
-    playMode4.diameterCurrent = playMode4.expandedLengthSvg * playMode4.defaultScaleRatio;
-    playMode4.baseGreenActive = true;
-    playMode4.photoSwitchedInSpin = false;
-    playMode4.fixedXRad = 0;
-    playMode4.fixedZRad = 0;
-    playMode4.holdFromXRad = 0;
-    playMode4.holdFromZRad = 0;
-    playMode4.nextXRad = randomMode4TiltX();
-    playMode4.nextZRad = randomMode4TiltZ();
     resetPlayMode5(performance.now());
+    resetPlayMode6(performance.now());
     setMode5CenterMode(constants.defaultMode5CenterMode);
     setMode5StackMode(false);
     setMode5OlabVisible(false);
+    setMode6Visible(false);
+    setMode6Texts(constants.defaultMode6Text);
     setupPlayYSpin("play1");
-    schedulePlayDimensionTargets(performance.now());
     shadingModeSelect.value = "lit";
     updateShadingMode("lit");
     shapeColorInput.value = constants.defaultColorHex;
@@ -3068,12 +4327,14 @@
     syncMode4ExpandedLengthInput();
     syncMode4MotionInputs();
     syncModePanels();
+    syncPlay1EnvironmentToggle();
     mode4ImageModeSelect.value = playMode4.imageMode;
     rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
     updateCameraUniforms();
     syncZoomInputs();
     applyFrameBackgroundColor(state.frameBgColor);
     applyFrameSize(constants.defaultFrameWidth, constants.defaultFrameHeight);
+    updatePlay1EnvironmentVisual();
     updateRotationInputs();
   }
 
@@ -3082,6 +4343,8 @@
   window.addEventListener("resize", () => {
     updateWorkspaceShellBounds();
     resizeCanvasToFrame();
+    resizeMode6TextCanvas();
+    renderMode6TextCanvas();
   });
 
   function wrapDeg(valueDeg) {
@@ -3304,26 +4567,14 @@
   state.playMode = "off";
   playDims.lengthCurrent = state.frustumLengthSvg;
   playDims.diameterCurrent = state.frustumLargeDiameterSvg;
-  playDims.fitLengthCurrent = state.frustumLengthSvg;
-  playDims.fitDiameterCurrent = state.frustumLargeDiameterSvg;
-  playMode4.phase = "hold";
-  playMode4.phaseStartMs = performance.now();
-  playMode4.lengthCurrent = playMode4.expandedLengthSvg;
-  playMode4.diameterCurrent = playMode4.expandedLengthSvg * playMode4.defaultScaleRatio;
-  playMode4.baseGreenActive = true;
-  playMode4.photoSwitchedInSpin = false;
-  playMode4.fixedXRad = 0;
-  playMode4.fixedZRad = 0;
-  playMode4.holdFromXRad = 0;
-  playMode4.holdFromZRad = 0;
-  playMode4.nextXRad = randomMode4TiltX();
-  playMode4.nextZRad = randomMode4TiltZ();
+  resetPlayMode4ToInitialState(performance.now());
   playMode4.imageMode = constants.defaultMode4ImageMode;
   resetPlayMode5(performance.now());
+  resetPlayMode6(performance.now());
   setMode5CenterMode(constants.defaultMode5CenterMode);
   setMode5StackMode(false);
+  setMode6Texts(constants.defaultMode6Text);
   setupPlayYSpin("play1");
-  schedulePlayDimensionTargets(performance.now());
   state.depthBlur = false;
   state.depthDynamic = false;
   state.perspectiveFovDeg = constants.defaultPerspectiveFovDeg;
@@ -3333,6 +4584,7 @@
   updateShadingMode("lit");
   mode4ImageModeSelect.value = playMode4.imageMode;
   setMode5OlabVisible(false);
+  setMode6Visible(false);
   updateMode4ImagesStatus();
   syncAppearancePanels();
   syncDimensionInputs();
@@ -3352,14 +4604,28 @@
     const dt = Math.min(0.06, Math.max(0.001, (timeMs - lastFrameMs) * 0.001));
     lastFrameMs = timeMs;
 
-    if (state.playMode === "play5") {
+    if (state.playMode === "play2") {
+      isDraggingModel = false;
+      dragModelMode = "rotate";
+      rotVelX = 0;
+      rotVelY = 0;
+      rotVelZ = 0;
+      applyPlay2State(dt);
+    } else if (state.playMode === "play5") {
+      isDraggingModel = false;
+      dragModelMode = "rotate";
+      rotVelX = 0;
+      rotVelY = 0;
+      rotVelZ = 0;
+      applyPlayMode6State(timeMs);
+    } else if (state.playMode === "play6") {
       isDraggingModel = false;
       dragModelMode = "rotate";
       rotVelX = 0;
       rotVelY = 0;
       rotVelZ = 0;
       applyPlayMode4State(timeMs);
-    } else if (state.playMode === "play6") {
+    } else if (state.playMode === "play7") {
       isDraggingModel = false;
       dragModelMode = "rotate";
       rotVelX = 0;
@@ -3368,20 +4634,15 @@
       applyPlayMode5State(timeMs);
     } else if (
       state.playMode === "play1" ||
-      state.playMode === "play2" ||
-      state.playMode === "play3" ||
       state.playMode === "play4"
     ) {
       if (
         state.playMode === "play1" ||
-        state.playMode === "play2" ||
-        state.playMode === "play3"
+        state.playMode === "play4"
       ) {
         if (timeMs >= playMotion.nextChangeMs) {
           schedulePlayOrbitTargets(timeMs);
         }
-      } else if (timeMs >= playMotion.nextChangeMs) {
-        schedulePlayTargets(timeMs);
       }
       const blend = 1 - Math.exp(-dt * 1.8);
       playMotion.vx += (playMotion.targetX - playMotion.vx) * blend;
@@ -3396,63 +4657,7 @@
       rotVelX = 0;
       rotVelY = 0;
 
-      if (state.playMode === "play2") {
-        const play2MinLength = Math.max(
-          constants.minLengthSvg,
-          constants.minLargeDiameterSvg / constants.playMode2MaxDiameterToLengthRatio,
-        );
-        const tFlow = timeMs * 0.001 - playDims.flowStartSec;
-        const lengthWave =
-          sampleOrganicWave(
-            tFlow,
-            playDims.lengthFreq,
-            playDims.lengthPhase1,
-            playDims.lengthPhase2,
-          ) * 0.5 +
-          0.5;
-        const targetLength = clamp(
-          play2MinLength + lengthWave * (constants.maxLengthSvg - play2MinLength),
-          play2MinLength,
-          constants.maxLengthSvg,
-        );
-        const maxDiameterForLength = Math.min(
-          constants.maxLargeDiameterSvg,
-          targetLength * constants.playMode2MaxDiameterToLengthRatio,
-        );
-        const diameterWave =
-          sampleOrganicWave(
-            tFlow + 1.73,
-            playDims.diameterFreq,
-            playDims.diameterPhase1,
-            playDims.diameterPhase2,
-          ) * 0.5 +
-          0.5;
-        const targetDiameter = clamp(
-          constants.minLargeDiameterSvg +
-            diameterWave * (maxDiameterForLength - constants.minLargeDiameterSvg),
-          constants.minLargeDiameterSvg,
-          maxDiameterForLength,
-        );
-
-        const dimBlend = 1 - Math.exp(-dt * 4.6);
-        playDims.lengthCurrent += (targetLength - playDims.lengthCurrent) * dimBlend;
-        playDims.diameterCurrent += (targetDiameter - playDims.diameterCurrent) * dimBlend;
-        playDims.diameterCurrent = Math.min(
-          playDims.diameterCurrent,
-          Math.min(
-            constants.maxLargeDiameterSvg,
-            playDims.lengthCurrent * constants.playMode2MaxDiameterToLengthRatio,
-          ),
-        );
-        if (
-          Math.abs(playDims.lengthCurrent - frustumLayout.lengthSvg) > 0.7 ||
-          Math.abs(playDims.diameterCurrent - frustumLayout.largeDiameterSvg) > 0.7
-        ) {
-          rebuildFrustumFor(playDims.lengthCurrent, playDims.diameterCurrent);
-        }
-      }
-
-      if (state.playMode === "play3") {
+      if (state.playMode === "play4") {
         const fixedPlay3Length = constants.fixedPlay3LengthSvg;
         const fixedPlay3Diameter = getFixedPlay3DiameterSvg();
         if (
@@ -3463,24 +4668,6 @@
         }
       }
 
-      if (state.playMode === "play4") {
-        const fitFactor = computeFrustumFillScale(state.cameraZ);
-        const safeFitFactor =
-          Number.isFinite(fitFactor) && fitFactor > 0 ? fitFactor : 1;
-        const targetLength = clamp(
-          frustumLayout.lengthSvg * safeFitFactor,
-          constants.minLengthSvg,
-          constants.maxLengthSvg,
-        );
-        const targetDiameter = clamp(
-          frustumLayout.largeDiameterSvg * safeFitFactor,
-          constants.minLargeDiameterSvg,
-          constants.maxLargeDiameterSvg,
-        );
-        playDims.fitLengthCurrent = targetLength;
-        playDims.fitDiameterCurrent = targetDiameter;
-        rebuildFrustumFor(playDims.fitLengthCurrent, playDims.fitDiameterCurrent);
-      }
     } else {
       stage.rotY += rotVelY;
       stage.rotX += rotVelX;
@@ -3497,10 +4684,10 @@
     frustumLargeBaseObject.rot[1] = 0;
     frustumLargeBaseObject.rot[2] = 0;
     const mode4MaskImage =
-      state.playMode === "play5" && playMode4.baseGreenActive
+      state.playMode === "play6" && playMode4.baseGreenActive
         ? getCurrentPlayMode4Image()
         : null;
-    if (state.playMode === "play5" && playMode4.baseGreenActive && !mode4MaskImage) {
+    if (state.playMode === "play6" && playMode4.baseGreenActive && !mode4MaskImage) {
       frustumLargeBaseObject.color[0] = constants.playMode4BaseGreen[0];
       frustumLargeBaseObject.color[1] = constants.playMode4BaseGreen[1];
       frustumLargeBaseObject.color[2] = constants.playMode4BaseGreen[2];
@@ -3514,10 +4701,10 @@
       if (
         state.playMode === "play1" ||
         state.playMode === "play2" ||
-        state.playMode === "play3" ||
         state.playMode === "play4" ||
         state.playMode === "play5" ||
-        state.playMode === "play6"
+        state.playMode === "play6" ||
+        state.playMode === "play7"
       ) {
         const lx = constants.defaultLightDir[0] + Math.sin(timeMs * 0.00063) * 0.65;
         const ly = constants.defaultLightDir[1] + Math.cos(timeMs * 0.00051) * 0.35;
@@ -3545,16 +4732,28 @@
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    const showPlay1Environment =
+      (state.playMode === "play1" || state.playMode === "play2") &&
+      playMode1.environmentEnabled &&
+      !!playMode1.environmentTexture;
+    if (showPlay1Environment) {
+      gl.depthMask(false);
+      gl.disable(gl.DEPTH_TEST);
+      drawPlay1EnvironmentPass();
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthMask(true);
+    }
     gl.uniform3fv(uStagePos, stage.pos);
     gl.uniform3f(uStageRot, stage.rotX, stage.rotY, stage.rotZ);
     if (useDepthPostFx) {
       updateDepthModeUniforms(timeMs);
     }
     updateRotationInputs();
+    updatePlay1EnvironmentVisual();
 
     const normalFlatMode = state.shadingMode === "flat" ? 1 : 0;
-    const mode5ShowOlab = state.playMode === "play6" && playMode5.showOlab;
-    const mode5StackMode = state.playMode === "play6" && playMode5.stackMode;
+    const mode5ShowOlab = state.playMode === "play7" && playMode5.showOlab;
+    const mode5StackMode = state.playMode === "play7" && playMode5.stackMode;
     const mode5TopAngle = playMode5.currentAngleRad;
     const mode5BottomAngle = mode5StackMode ? -playMode5.currentAngleRad : playMode5.currentAngleRad;
     gl.uniform1f(uFlatMode, normalFlatMode);
@@ -3572,7 +4771,7 @@
     } else if (!mode5ShowOlab) {
       drawObject(sphereObject);
       drawObject(frustumObject);
-      if (state.playMode === "play5" && playMode4.baseGreenActive) {
+      if (state.playMode === "play6" && playMode4.baseGreenActive) {
         gl.uniform1f(uFlatMode, 1);
         if (mode4MaskImage) {
           drawObject(frustumLargeBaseObject, {
@@ -3590,6 +4789,11 @@
       }
     }
     updateMode5OlabTransform();
+    setMode6Visible(state.playMode === "play5");
+    if (state.playMode !== "play5") {
+      updateMode6TextOrbit();
+      updateMode6OlabTransform();
+    }
 
     if (useDepthPostFx) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);

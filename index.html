@@ -84,17 +84,29 @@
           <select id="play-mode">
             <option value="off" selected>Off</option>
             <option value="play1">1 Organic orbit</option>
-            <option value="play2">2 Organic size flow</option>
-            <option value="play3">3 Long fixed orbit</option>
-            <option value="play4">4 Auto-fit frustum</option>
-            <option value="play5">5 Hold-spin loop</option>
-            <option value="play6">6 Shape / OLAB switch</option>
+            <option value="play2">2 Horizontal orbit</option>
+            <option value="play4">3 Long fixed orbit</option>
+            <option value="play6">4 Hold-spin loop</option>
+            <option value="play7">5 Shape / OLAB switch</option>
+            <option value="play5">6 Top shape / text orbit</option>
           </select>
         </label>
 
+        <div id="mode1-controls" class="mode1-controls" hidden>
+          <label class="toggle">
+            <input id="play1-environment-toggle" type="checkbox" />
+            <span>360 environment</span>
+          </label>
+          <label class="field">
+            <span>Upload 360 photo</span>
+            <input id="play1-environment-input" type="file" accept="image/*,.exr" />
+          </label>
+          <button id="clear-play1-environment-btn" type="button">Clear Environment Photo</button>
+        </div>
+
         <div id="mode4-controls" class="mode4-controls" hidden>
           <label class="field">
-            <span>5 expanded length</span>
+            <span>4 expanded length</span>
             <input
               id="mode4-expanded-length-input"
               type="number"
@@ -106,19 +118,19 @@
           </label>
 
           <label class="field">
-            <span>5 easing</span>
+            <span>4 easing</span>
             <input id="mode4-ease-range" type="range" min="0" max="1" step="0.01" value="1" />
             <input id="mode4-ease-number" type="number" min="0" max="1" step="0.01" value="1" />
           </label>
 
           <label class="field">
-            <span>5 zoom amount</span>
+            <span>4 zoom amount</span>
             <input id="mode4-zoom-amount-range" type="range" min="0" max="120" step="0.1" value="120" />
             <input id="mode4-zoom-amount-number" type="number" min="0" max="120" step="0.1" value="120" />
           </label>
 
           <label class="field">
-            <span>5 image mode</span>
+            <span>4 image mode</span>
             <select id="mode4-image-mode">
               <option value="mask" selected>Mask (screen-locked)</option>
               <option value="follow">Follow base rotation</option>
@@ -126,10 +138,10 @@
           </label>
 
           <label class="field">
-            <span>5 mask images</span>
+            <span>4 mask images</span>
             <input id="mode4-images-input" type="file" accept="image/*" multiple />
           </label>
-          <button id="clear-mode4-images-btn" type="button">Clear Play5 Images</button>
+          <button id="clear-mode4-images-btn" type="button">Clear Play4 Images</button>
           <input id="mode4-replace-input" type="file" accept="image/*" hidden />
           <div id="mode4-images-list" class="mode4-images-list"></div>
           <p id="mode4-images-status" class="copy-status"></p>
@@ -137,7 +149,7 @@
 
         <div id="mode5-controls" class="mode5-controls" hidden>
           <label class="field">
-            <span>6 center mode</span>
+            <span>5 center mode</span>
             <select id="mode5-center-mode">
               <option value="anchor" selected>Sphere / O center</option>
               <option value="full">Whole figure center (realtime)</option>
@@ -145,7 +157,19 @@
           </label>
           <label class="toggle">
             <input id="mode5-stack-toggle" type="checkbox" />
-            <span>6 stacked swap</span>
+            <span>5 stacked swap</span>
+          </label>
+        </div>
+
+        <div id="mode6-controls" class="mode6-controls" hidden>
+          <label class="field">
+            <span>6 text segments</span>
+            <div id="mode6-segments-list" class="mode6-segments-list"></div>
+          </label>
+          <button id="mode6-add-segment-btn" type="button">Add text segment</button>
+          <label class="toggle">
+            <input id="mode6-fill-text-toggle" type="checkbox" />
+            <span>6 fill text size</span>
           </label>
         </div>
       </section>
@@ -193,7 +217,13 @@
 
     <main id="frame-shell">
       <div id="frame" style="width: 600px; height: 800px">
+        <div id="play1-environment" aria-hidden="true"></div>
         <img id="frame-bg-image" alt="" />
+        <div id="mode6-text-orbit" class="mode6-text-orbit" aria-hidden="true">
+          <div id="mode6-text-carrier" class="mode6-text-carrier">
+            <div id="mode6-middle-text" class="mode6-middle-text">INSERT TEXT</div>
+          </div>
+        </div>
         <div id="mode5-olab-wrap" class="mode5-olab-wrap" aria-hidden="true">
           <svg id="mode5-olab-svg" class="mode5-olab-svg" viewBox="0 0 155 47" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <g id="mode5-olab-lab" class="mode5-olab-lab">
