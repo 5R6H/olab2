@@ -8,75 +8,206 @@
   </head>
   <body>
     <aside class="ui-panel">
-      <h1>Shape Controls</h1>
-      <p class="ui-subtitle">Adjust look, geometry, playback, and frame layout.</p>
+      <h1>Brand System</h1>
+      <p class="ui-subtitle">Split the tool into typography and motion so the frame can hold both layout and behavior.</p>
 
-      <section class="ui-group">
-        <h2 class="group-title">Appearance</h2>
-        <label class="field">
-          <span>Shape color</span>
-          <input id="shape-color" type="color" value="#1c1c1c" />
-        </label>
-
-        <label class="field">
-          <span>Render mode</span>
-          <select id="shading-mode">
-            <option value="lit" selected>Lit</option>
-            <option value="flat">Flat color</option>
-            <option value="depth">Depth map</option>
-          </select>
-        </label>
-
-        <div id="depth-controls" class="mode5-controls" hidden>
-          <label class="toggle">
-            <input id="depth-blur-toggle" type="checkbox" />
-            <span>模糊</span>
-          </label>
-          <label class="toggle">
-            <input id="depth-dynamic-toggle" type="checkbox" />
-            <span>动态</span>
-          </label>
+      <section class="ui-section">
+        <div class="section-head">
+          <p class="section-index">01</p>
+          <div class="section-copy">
+            <h2>Typography</h2>
+            <p>Establish the frame as a layout surface with a reusable composition grid.</p>
+          </div>
         </div>
+
+        <section class="ui-group">
+          <h2 class="group-title">Layout Grid</h2>
+          <label class="field">
+            <span>Layout</span>
+            <select id="type-layout-select">
+              <option value="free">Free</option>
+              <option value="layout1" selected>Layout 1</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Mark type</span>
+            <select id="type-mark-mode-select">
+              <option value="icon" selected>Icon only</option>
+              <option value="combination">Combination mark</option>
+              <option value="separate">Separate mark</option>
+              <option value="wordmark">Wordmark only</option>
+            </select>
+          </label>
+
+          <label class="toggle">
+            <input id="type-grid-toggle" type="checkbox" checked />
+            <span>Show frame grid</span>
+          </label>
+
+          <button id="type-add-text-btn" type="button">Add text box</button>
+
+          <div class="field-grid field-grid-compact">
+            <button id="type-text-scale-up-btn" type="button">Current text ×2</button>
+            <button id="type-text-scale-down-btn" type="button">Current text ÷2</button>
+          </div>
+
+          <label class="field">
+            <span>Current text align</span>
+            <select id="type-text-align-select">
+              <option value="left" selected>Left</option>
+              <option value="center">Center</option>
+            </select>
+          </label>
+
+          <div class="field-grid field-grid-compact">
+            <label class="field compact">
+              <span>Layout1 end col</span>
+              <select id="type-layout1-end-col-input">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="6">6</option>
+              </select>
+            </label>
+            <label class="field compact">
+              <span>Columns</span>
+              <input id="type-grid-columns-input" type="number" min="2" max="12" step="1" value="6" />
+            </label>
+            <label class="field compact">
+              <span>Margin</span>
+              <input id="type-grid-margin-input" type="number" min="0" max="240" step="1" value="48" />
+            </label>
+            <label class="field compact">
+              <span>Gutter</span>
+              <input id="type-grid-gutter-input" type="number" min="0" max="120" step="1" value="16" />
+            </label>
+            <label class="field compact">
+              <span>Rows</span>
+              <input id="type-grid-baseline-input" type="number" min="6" max="6" step="1" value="6" disabled />
+            </label>
+          </div>
+        </section>
+
+        <section class="ui-group">
+          <h2 class="group-title">Frame</h2>
+          <label class="field">
+            <span>Frame preset</span>
+            <select id="frame-preset-select">
+              <option value="custom" selected>Custom</option>
+              <option value="a4-portrait">A4 Portrait</option>
+              <option value="a4-landscape">A4 Landscape</option>
+              <option value="a5-portrait">A5 Portrait</option>
+              <option value="letter-portrait">US Letter Portrait</option>
+              <option value="letter-landscape">US Letter Landscape</option>
+              <option value="instagram-post">Instagram Post</option>
+              <option value="instagram-portrait">Instagram Portrait</option>
+              <option value="instagram-story">Instagram Story / Reel</option>
+              <option value="youtube-thumb">YouTube Thumbnail</option>
+              <option value="presentation-16x9">Presentation 16:9</option>
+            </select>
+          </label>
+          <p id="frame-preset-note" class="copy-status"></p>
+
+          <label class="field">
+            <span>Frame background</span>
+            <input id="frame-bg-color" type="color" value="#ffffff" />
+          </label>
+
+          <div class="frame-size">
+            <label class="field compact">
+              <span>Frame width</span>
+              <input id="frame-width-input" type="number" min="100" max="2200" step="1" value="600" />
+            </label>
+            <label class="field compact">
+              <span>Frame height</span>
+              <input id="frame-height-input" type="number" min="100" max="2200" step="1" value="800" />
+            </label>
+          </div>
+
+          <label class="field">
+            <span>Background image</span>
+            <input id="frame-image-input" type="file" accept="image/*" />
+          </label>
+          <button id="clear-image-btn" type="button">Clear Background Image</button>
+        </section>
       </section>
 
-      <section class="ui-group">
-        <h2 class="group-title">Geometry</h2>
-        <label class="field">
-          <span>Frustum length</span>
-          <input id="frustum-length-range" type="range" min="489.493138" max="10000" step="0.1" value="489.493138" />
-          <input id="frustum-length-number" type="number" min="489.493138" max="10000" step="0.1" value="489.493138" />
-        </label>
+      <section class="ui-section">
+        <div class="section-head">
+          <p class="section-index">02</p>
+          <div class="section-copy">
+            <h2>Motion System</h2>
+            <p>Control the form, rendering, and all playback behaviors that drive the animated identity.</p>
+          </div>
+        </div>
 
-        <label class="field">
-          <span>Large base diameter</span>
-          <input id="frustum-diameter-range" type="range" min="160.829039" max="3285.6240" step="0.1" value="160.829039" />
-          <input id="frustum-diameter-number" type="number" min="160.829039" max="3285.6240" step="0.1" value="160.829039" />
-        </label>
+        <section class="ui-group">
+          <h2 class="group-title">Appearance</h2>
+          <label class="field">
+            <span>Shape color</span>
+            <input id="shape-color" type="color" value="#1c1c1c" />
+          </label>
 
-        <label class="field">
-          <span>Gap (x sphere diameter)</span>
-          <input id="gap-range" type="range" min="0" max="8" step="0.1" value="0.5" />
-          <input id="gap-number" type="number" min="0" max="8" step="0.1" value="0.5" />
-        </label>
+          <label class="field">
+            <span>Render mode</span>
+            <select id="shading-mode">
+              <option value="lit" selected>Lit</option>
+              <option value="flat">Flat color</option>
+              <option value="depth">Depth map</option>
+            </select>
+          </label>
 
-        <label class="toggle">
-          <input id="proportion-lock" type="checkbox" checked />
-          <span>Scale proportionally</span>
-        </label>
-      </section>
+          <div id="depth-controls" class="mode5-controls" hidden>
+            <label class="toggle">
+              <input id="depth-blur-toggle" type="checkbox" />
+              <span>模糊</span>
+            </label>
+            <label class="toggle">
+              <input id="depth-dynamic-toggle" type="checkbox" />
+              <span>动态</span>
+            </label>
+          </div>
+        </section>
 
-      <section class="ui-group">
-        <h2 class="group-title">Playback</h2>
-        <label class="field">
-          <span>Zoom</span>
-          <input id="zoom-range" type="range" min="5" max="220" step="0.1" value="12.2" />
-          <input id="zoom-number" type="number" min="5" max="220" step="0.1" value="12.2" />
-        </label>
+        <section class="ui-group">
+          <h2 class="group-title">Geometry</h2>
+          <label class="field">
+            <span>Frustum length</span>
+            <input id="frustum-length-range" type="range" min="489.493138" max="10000" step="0.1" value="489.493138" />
+            <input id="frustum-length-number" type="number" min="489.493138" max="10000" step="0.1" value="489.493138" />
+          </label>
+
+          <label class="field">
+            <span>Large base diameter</span>
+            <input id="frustum-diameter-range" type="range" min="160.829039" max="3285.6240" step="0.1" value="160.829039" />
+            <input id="frustum-diameter-number" type="number" min="160.829039" max="3285.6240" step="0.1" value="160.829039" />
+          </label>
+
+          <label class="field">
+            <span>Gap (x sphere diameter)</span>
+            <input id="gap-range" type="range" min="0" max="8" step="0.1" value="0.5" />
+            <input id="gap-number" type="number" min="0" max="8" step="0.1" value="0.5" />
+          </label>
+
+          <label class="toggle">
+            <input id="proportion-lock" type="checkbox" checked />
+            <span>Scale proportionally</span>
+          </label>
+        </section>
+
+        <section class="ui-group">
+          <h2 class="group-title">Playback</h2>
+          <label class="field">
+            <span>Zoom</span>
+            <input id="zoom-range" type="range" min="5" max="5000" step="0.1" value="12.2" />
+            <input id="zoom-number" type="number" min="5" max="5000" step="0.1" value="12.2" />
+          </label>
 
         <label class="field">
           <span>Perspective</span>
-          <input id="perspective-range" type="range" min="12" max="200" step="0.1" value="38" />
-          <input id="perspective-number" type="number" min="12" max="200" step="0.1" value="38" />
+          <input id="perspective-range" type="range" min="0" max="200" step="0.1" value="0" />
+          <input id="perspective-number" type="number" min="0" max="200" step="0.1" value="0" />
         </label>
 
         <label class="field">
@@ -172,45 +303,20 @@
             <span>6 fill text size</span>
           </label>
         </div>
-      </section>
 
-      <section class="ui-group">
-        <h2 class="group-title">Frame</h2>
-        <label class="field">
-          <span>Frame background</span>
-          <input id="frame-bg-color" type="color" value="#ffffff" />
-        </label>
+        <section class="ui-group">
+          <h2 class="group-title">Rotation</h2>
+          <div class="angles">
+            <label><span>X</span><input id="rot-x-input" type="number" step="0.1" value="0" /></label>
+            <label><span>Y</span><input id="rot-y-input" type="number" step="0.1" value="0" /></label>
+            <label><span>Z</span><input id="rot-z-input" type="number" step="0.1" value="0" /></label>
+          </div>
+        </section>
 
-        <div class="frame-size">
-          <label class="field compact">
-            <span>Frame width</span>
-            <input id="frame-width-input" type="number" min="260" max="2200" step="1" value="600" />
-          </label>
-          <label class="field compact">
-            <span>Frame height</span>
-            <input id="frame-height-input" type="number" min="300" max="2200" step="1" value="800" />
-          </label>
-        </div>
-
-        <label class="field">
-          <span>Background image</span>
-          <input id="frame-image-input" type="file" accept="image/*" />
-        </label>
-        <button id="clear-image-btn" type="button">Clear Background Image</button>
-      </section>
-
-      <section class="ui-group">
-        <h2 class="group-title">Rotation</h2>
-        <div class="angles">
-          <label><span>X</span><input id="rot-x-input" type="number" step="0.1" value="0" /></label>
-          <label><span>Y</span><input id="rot-y-input" type="number" step="0.1" value="0" /></label>
-          <label><span>Z</span><input id="rot-z-input" type="number" step="0.1" value="0" /></label>
-        </div>
-      </section>
-
-      <section class="ui-group ui-actions">
-        <button id="reset-btn" type="button">Reset</button>
-        <button id="copy-svg-btn" type="button">Copy Current Frame As SVG</button>
+        <section class="ui-group ui-actions">
+          <button id="reset-btn" type="button">Reset</button>
+          <button id="copy-svg-btn" type="button">Copy Current Frame As SVG</button>
+        </section>
       </section>
       <p id="copy-status" class="copy-status"></p>
     </aside>
@@ -219,6 +325,11 @@
       <div id="frame" style="width: 600px; height: 800px">
         <div id="play1-environment" aria-hidden="true"></div>
         <img id="frame-bg-image" alt="" />
+        <div id="type-grid" aria-hidden="true">
+          <div id="type-grid-columns"></div>
+          <div id="type-grid-baselines"></div>
+        </div>
+        <div id="type-text-layer" aria-hidden="true"></div>
         <div id="mode6-text-orbit" class="mode6-text-orbit" aria-hidden="true">
           <div id="mode6-text-carrier" class="mode6-text-carrier">
             <div id="mode6-middle-text" class="mode6-middle-text">INSERT TEXT</div>

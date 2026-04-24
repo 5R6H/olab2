@@ -4,6 +4,22 @@
   const frameShell = document.getElementById("frame-shell");
   const resizeHandle = document.getElementById("resize-handle");
   const uiPanel = document.querySelector(".ui-panel");
+  const typeGridToggle = document.getElementById("type-grid-toggle");
+  const typeLayoutSelect = document.getElementById("type-layout-select");
+  const typeMarkModeSelect = document.getElementById("type-mark-mode-select");
+  const typeAddTextButton = document.getElementById("type-add-text-btn");
+  const typeTextScaleUpButton = document.getElementById("type-text-scale-up-btn");
+  const typeTextScaleDownButton = document.getElementById("type-text-scale-down-btn");
+  const typeTextAlignSelect = document.getElementById("type-text-align-select");
+  const typeLayout1EndColInput = document.getElementById("type-layout1-end-col-input");
+  const typeGridColumnsInput = document.getElementById("type-grid-columns-input");
+  const typeGridMarginInput = document.getElementById("type-grid-margin-input");
+  const typeGridGutterInput = document.getElementById("type-grid-gutter-input");
+  const typeGridBaselineInput = document.getElementById("type-grid-baseline-input");
+  const typeGrid = document.getElementById("type-grid");
+  const typeGridColumnsLayer = document.getElementById("type-grid-columns");
+  const typeGridRowsLayer = document.getElementById("type-grid-baselines");
+  const typeTextLayer = document.getElementById("type-text-layer");
 
   const shapeColorInput = document.getElementById("shape-color");
   const frustumLengthRange = document.getElementById("frustum-length-range");
@@ -40,6 +56,8 @@
   const zoomNumber = document.getElementById("zoom-number");
   const perspectiveRange = document.getElementById("perspective-range");
   const perspectiveNumber = document.getElementById("perspective-number");
+  const framePresetSelect = document.getElementById("frame-preset-select");
+  const framePresetNote = document.getElementById("frame-preset-note");
   const frameBgColorInput = document.getElementById("frame-bg-color");
   const frameWidthInput = document.getElementById("frame-width-input");
   const frameHeightInput = document.getElementById("frame-height-input");
@@ -124,8 +142,18 @@
     "mode6",
   );
 
+  const typeOlabInstance = createOlabCloneInstance(
+    "type-olab-wrap",
+    "type",
+  );
+
   const mode5OlabInstances = [mode5OlabPrimary, mode5OlabSecondary].filter(Boolean);
-  const olabColorInstances = [mode5OlabPrimary, mode5OlabSecondary, mode6OlabInstance].filter(Boolean);
+  const olabColorInstances = [
+    mode5OlabPrimary,
+    mode5OlabSecondary,
+    mode6OlabInstance,
+    typeOlabInstance,
+  ].filter(Boolean);
 
   function createMode6TextLayer(orbit, carrier, text, suffix) {
     if (!orbit || !carrier || !text) return null;
@@ -205,21 +233,43 @@
     maxMode4ZoomOutExtra: 120,
     defaultMode4ZoomOutExtra: 120,
     defaultMode4ImageMode: "mask",
-    minFrameWidth: 260,
+    minFrameWidth: 100,
     maxFrameWidth: 2200,
-    minFrameHeight: 300,
+    minFrameHeight: 100,
     maxFrameHeight: 2200,
     minCameraZ: 5,
-    maxCameraZ: 220,
+    maxCameraZ: 5000,
     defaultCameraZ: 12.2,
     defaultFrameWidth: 600,
     defaultFrameHeight: 800,
     defaultFrameBgColor: "#ffffff",
+    defaultTypeGridVisible: true,
+    defaultTypeLayout: "layout1",
+    defaultTypeMarkMode: "icon",
+    defaultTypeLayout1EndColumn: 3,
+    defaultTypeGridColumns: 6,
+    minTypeGridColumns: 2,
+    maxTypeGridColumns: 12,
+    defaultTypeGridMargin: 48,
+    minTypeGridMargin: 0,
+    maxTypeGridMargin: 240,
+    defaultTypeGridGutter: 16,
+    minTypeGridGutter: 0,
+    maxTypeGridGutter: 120,
+    defaultTypeGridBaseline: 6,
+    minTypeGridBaseline: 6,
+    maxTypeGridBaseline: 6,
+    typeFontUnitsPerEm: 1000,
+    typeFontCapHeight: 700,
+    typeFontDescender: 205,
+    typeFontRasterAlphaThreshold: 24,
+    typeFontRasterVerticalAlphaThreshold: 1,
     defaultColorHex: "#1c1c1c",
-    defaultPerspectiveFovDeg: 38,
-    minPerspectiveFovDeg: 12,
+    defaultPerspectiveFovDeg: 0,
+    minPerspectiveFovDeg: 0,
     maxPerspectiveFovDeg: 200,
     maxPerspectiveEffectiveFovDeg: 170,
+    minPerspectiveEffectiveFovDeg: 12,
     defaultPlay1EnvironmentEnabled: false,
     defaultPlay6ZoomZ: 57.6,
     defaultPlay6PerspectiveFovDeg: 130,
@@ -235,6 +285,7 @@
     defaultMode6CameraZ: 78,
     defaultMode6TopPaddingRatio: 0.08,
     defaultMode6BottomPaddingRatio: 0.08,
+    typeCombinationGapWidthRatio: 0.020285594736601235,
     defaultMode6TextFontSizeRatio: 44.15 / 600,
     defaultMode6TextOrbitDistanceFrameWidthRatio: 0.5 * 1.2,
     defaultMode6TextDepthPx: 220,
@@ -259,11 +310,92 @@
 
   const worldPerSvgUnit = (2 * constants.sphereRadiusWorld) / constants.sphereDiameterSvg;
   const svgToWorld = (value) => value * worldPerSvgUnit;
+  const mmToCssPx = (value) => (value * 96) / 25.4;
+  const inToCssPx = (value) => value * 96;
+  const framePresets = {
+    custom: {
+      width: constants.defaultFrameWidth,
+      height: constants.defaultFrameHeight,
+      note: "",
+      print: false,
+    },
+    "a4-portrait": {
+      width: mmToCssPx(210),
+      height: mmToCssPx(297),
+      note: "Print preset: A4 portrait, mapped from 210 × 297 mm using CSS physical units.",
+      print: true,
+    },
+    "a4-landscape": {
+      width: mmToCssPx(297),
+      height: mmToCssPx(210),
+      note: "Print preset: A4 landscape, mapped from 297 × 210 mm using CSS physical units.",
+      print: true,
+    },
+    "a5-portrait": {
+      width: mmToCssPx(148),
+      height: mmToCssPx(210),
+      note: "Print preset: A5 portrait, mapped from 148 × 210 mm using CSS physical units.",
+      print: true,
+    },
+    "letter-portrait": {
+      width: inToCssPx(8.5),
+      height: inToCssPx(11),
+      note: "Print preset: US Letter portrait, mapped from 8.5 × 11 in using CSS physical units.",
+      print: true,
+    },
+    "letter-landscape": {
+      width: inToCssPx(11),
+      height: inToCssPx(8.5),
+      note: "Print preset: US Letter landscape, mapped from 11 × 8.5 in using CSS physical units.",
+      print: true,
+    },
+    "instagram-post": {
+      width: 1080,
+      height: 1080,
+      note: "Digital preset: Instagram square post, 1080 × 1080 px.",
+      print: false,
+    },
+    "instagram-portrait": {
+      width: 1080,
+      height: 1350,
+      note: "Digital preset: Instagram portrait post, 1080 × 1350 px.",
+      print: false,
+    },
+    "instagram-story": {
+      width: 1080,
+      height: 1920,
+      note: "Digital preset: Instagram Story / Reel, 1080 × 1920 px.",
+      print: false,
+    },
+    "youtube-thumb": {
+      width: 1280,
+      height: 720,
+      note: "Digital preset: YouTube thumbnail, 1280 × 720 px.",
+      print: false,
+    },
+    "presentation-16x9": {
+      width: 1920,
+      height: 1080,
+      note: "Digital preset: presentation slide, 1920 × 1080 px.",
+      print: false,
+    },
+  };
 
   const state = {
     frameWidth: constants.defaultFrameWidth,
     frameHeight: constants.defaultFrameHeight,
+    framePreset: "custom",
     frameBgColor: constants.defaultFrameBgColor,
+    typeGridVisible: constants.defaultTypeGridVisible,
+    typeLayout: constants.defaultTypeLayout,
+    typeMarkMode: constants.defaultTypeMarkMode,
+    typeLayout1EndColumn: constants.defaultTypeLayout1EndColumn,
+    typeGridColumns: constants.defaultTypeGridColumns,
+    typeGridMargin: constants.defaultTypeGridMargin,
+    typeGridGutter: constants.defaultTypeGridGutter,
+    typeGridBaseline: constants.defaultTypeGridBaseline,
+    typeTextBoxes: [],
+    activeTypeTextBoxId: null,
     frustumLengthSvg: constants.defaultFrustumLengthSvg,
     frustumLargeDiameterSvg: constants.defaultFrustumLargeDiameterSvg,
     gapRatio: constants.gapSvg / constants.sphereDiameterSvg,
@@ -277,6 +409,91 @@
     depthDynamic: false,
     playMode: "off",
   };
+
+  const typeTextBoxElements = new Map();
+  let nextTypeTextBoxId = 1;
+  let typeTextDrag = null;
+  const svgNs = "http://www.w3.org/2000/svg";
+  const typeTextMeasureCanvas = document.createElement("canvas");
+  const typeTextMeasureContext = typeTextMeasureCanvas.getContext("2d");
+  const typeTextMeasureSvgState = (() => {
+    if (!document.body) return null;
+    const svg = document.createElementNS(svgNs, "svg");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("width", "4096");
+    svg.setAttribute("height", "4096");
+    svg.style.position = "fixed";
+    svg.style.left = "-10000px";
+    svg.style.top = "-10000px";
+    svg.style.overflow = "visible";
+    svg.style.pointerEvents = "none";
+    svg.style.opacity = "0";
+
+    const text = document.createElementNS(svgNs, "text");
+    text.setAttributeNS("http://www.w3.org/XML/1998/namespace", "space", "preserve");
+    text.setAttribute("fill", "#000");
+    text.setAttribute("text-rendering", "geometricPrecision");
+    svg.appendChild(text);
+    document.body.appendChild(svg);
+    return { svg, text };
+  })();
+
+  function applyTypeTextMeasureFont(node, fontSizeCss) {
+    if (!node) return;
+    node.style.fontFamily = '"Aeonik Fono", Arial, "Helvetica Neue", sans-serif';
+    node.style.fontWeight = "500";
+    node.style.fontSize = `${fontSizeCss}px`;
+    node.style.letterSpacing = "-0.02em";
+  }
+
+  function getTypeTextSvgBBox(text, fontSizeCss, lineHeightCss) {
+    if (!typeTextMeasureSvgState) return null;
+    const safeFontSize = Math.max(1, Number(fontSizeCss) || 1);
+    const safeLineHeight = Math.max(safeFontSize, Number(lineHeightCss) || safeFontSize);
+    const lines = String(text || "").split(/\r?\n/);
+    const safeLines = lines.length ? lines : [""];
+    const textNode = typeTextMeasureSvgState.text;
+    textNode.replaceChildren();
+    applyTypeTextMeasureFont(textNode, safeFontSize);
+
+    for (let index = 0; index < safeLines.length; index += 1) {
+      const tspan = document.createElementNS(svgNs, "tspan");
+      tspan.setAttribute("x", "0");
+      tspan.setAttribute("y", `${index * safeLineHeight}`);
+      tspan.textContent = safeLines[index] || " ";
+      textNode.appendChild(tspan);
+    }
+
+    try {
+      const bbox = textNode.getBBox();
+      if (
+        Number.isFinite(bbox.x) &&
+        Number.isFinite(bbox.y) &&
+        Number.isFinite(bbox.width) &&
+        Number.isFinite(bbox.height)
+      ) {
+        return bbox;
+      }
+    } catch (_error) {
+      return null;
+    }
+    return null;
+  }
+
+  function getFramePresetKeyForSize(width, height) {
+    const safeWidth = Math.round(Number(width));
+    const safeHeight = Math.round(Number(height));
+    for (const [key, preset] of Object.entries(framePresets)) {
+      if (key === "custom") continue;
+      if (
+        Math.abs(Math.round(preset.width) - safeWidth) <= 1 &&
+        Math.abs(Math.round(preset.height) - safeHeight) <= 1
+      ) {
+        return key;
+      }
+    }
+    return "custom";
+  }
 
   function createPlay1EnvironmentSvgDataUrl() {
     const svg = `
@@ -1349,7 +1566,13 @@
       constants.minPerspectiveFovDeg,
       constants.maxPerspectiveFovDeg,
     );
-    if (safeRaw <= 90) return safeRaw;
+    if (safeRaw <= 90) {
+      const lowT = safeRaw / 90;
+      return (
+        constants.minPerspectiveEffectiveFovDeg +
+        (90 - constants.minPerspectiveEffectiveFovDeg) * lowT
+      );
+    }
     const t = (safeRaw - 90) / Math.max(0.0001, constants.maxPerspectiveFovDeg - 90);
     const eased = 1 - Math.pow(1 - t, 1.65);
     return 90 + (constants.maxPerspectiveEffectiveFovDeg - 90) * eased;
@@ -2154,10 +2377,18 @@
     const safeHeight = Number.isFinite(height) ? height : state.frameHeight;
     state.frameWidth = clamp(safeWidth, constants.minFrameWidth, constants.maxFrameWidth);
     state.frameHeight = clamp(safeHeight, constants.minFrameHeight, constants.maxFrameHeight);
+    state.framePreset = getFramePresetKeyForSize(state.frameWidth, state.frameHeight);
     frame.style.width = `${Math.round(state.frameWidth)}px`;
     frame.style.height = `${Math.round(state.frameHeight)}px`;
     frameShell.style.setProperty("--frame-w", `${Math.round(state.frameWidth)}px`);
     frameShell.style.setProperty("--frame-h", `${Math.round(state.frameHeight)}px`);
+    if (framePresetSelect && document.activeElement !== framePresetSelect) {
+      framePresetSelect.value = state.framePreset;
+    }
+    if (framePresetNote) {
+      const preset = framePresets[state.framePreset] || framePresets.custom;
+      framePresetNote.textContent = preset.note || "";
+    }
     if (document.activeElement !== frameWidthInput) {
       frameWidthInput.value = String(Math.round(state.frameWidth));
     }
@@ -2190,6 +2421,829 @@
     if (frameBgColorInput && document.activeElement !== frameBgColorInput) {
       frameBgColorInput.value = next;
     }
+  }
+
+  function syncTypeGridInputs() {
+    const effectiveGridSpacing = getEffectiveTypeGridSpacing();
+    if (typeLayoutSelect && document.activeElement !== typeLayoutSelect) {
+      typeLayoutSelect.value = state.typeLayout;
+    }
+    if (typeMarkModeSelect) {
+      const combinationOption = typeMarkModeSelect.querySelector('option[value="combination"]');
+      if (combinationOption) {
+        combinationOption.disabled = state.typeLayout1EndColumn !== 1;
+      }
+    }
+    if (typeMarkModeSelect && document.activeElement !== typeMarkModeSelect) {
+      typeMarkModeSelect.value = state.typeMarkMode;
+    }
+    if (typeLayout1EndColInput && document.activeElement !== typeLayout1EndColInput) {
+      typeLayout1EndColInput.value = String(state.typeLayout1EndColumn);
+    }
+    if (typeGridToggle && document.activeElement !== typeGridToggle) {
+      typeGridToggle.checked = !!state.typeGridVisible;
+    }
+    if (typeGridColumnsInput && document.activeElement !== typeGridColumnsInput) {
+      typeGridColumnsInput.value = String(state.typeGridColumns);
+    }
+    if (typeGridMarginInput && document.activeElement !== typeGridMarginInput) {
+      typeGridMarginInput.value = String(Math.round(effectiveGridSpacing.marginCss));
+    }
+    if (typeGridGutterInput && document.activeElement !== typeGridGutterInput) {
+      typeGridGutterInput.value = String(Math.round(effectiveGridSpacing.gutterCss));
+    }
+    if (typeGridBaselineInput && document.activeElement !== typeGridBaselineInput) {
+      typeGridBaselineInput.value = String(state.typeGridBaseline);
+    }
+    syncTypeTextControls();
+  }
+
+  function getEffectiveTypeGridSpacing(rect) {
+    const safeRect = rect || frame.getBoundingClientRect();
+    if (state.typeLayout === "layout1" && state.playMode === "off") {
+      const screenMetrics =
+        safeRect.width > 1 && safeRect.height > 1 ? getMode5SphereScreenMetrics(safeRect) : null;
+      if (screenMetrics) {
+        const gapCss = Math.max(0, screenMetrics.sphereDiameterCss * state.gapRatio);
+        const shortSideCss = Math.min(safeRect.width, safeRect.height);
+        return {
+          marginCss: shortSideCss / 24,
+          gutterCss: gapCss,
+        };
+      }
+    }
+    return {
+      marginCss: Math.max(0, state.typeGridMargin),
+      gutterCss: Math.max(0, state.typeGridGutter),
+    };
+  }
+
+  function canUseTypeLayoutEditing() {
+    return state.playMode === "off" && state.typeLayout === "layout1";
+  }
+
+  function dedupeSnapLines(lines) {
+    const unique = [];
+    for (const value of lines) {
+      if (!Number.isFinite(value)) continue;
+      if (!unique.length || Math.abs(unique[unique.length - 1] - value) > 0.5) {
+        unique.push(value);
+      }
+    }
+    return unique;
+  }
+
+  function getTypeGridSnapMetrics(rect) {
+    const safeRect = rect || frame.getBoundingClientRect();
+    const effectiveGridSpacing = getEffectiveTypeGridSpacing(safeRect);
+    const columns = Math.max(constants.minTypeGridColumns, state.typeGridColumns);
+    const rows = Math.max(constants.minTypeGridBaseline, state.typeGridBaseline);
+    const availableWidth =
+      safeRect.width -
+      effectiveGridSpacing.marginCss * 2 -
+      effectiveGridSpacing.gutterCss * Math.max(0, columns - 1);
+    const availableHeight =
+      safeRect.height -
+      effectiveGridSpacing.marginCss * 2 -
+      effectiveGridSpacing.gutterCss * Math.max(0, rows - 1);
+    const columnWidth = Math.max(1, availableWidth / Math.max(1, columns));
+    const rowHeight = Math.max(1, availableHeight / Math.max(1, rows));
+    const xLines = [];
+    const yLines = [];
+    for (let index = 0; index < columns; index += 1) {
+      const start = effectiveGridSpacing.marginCss + index * (columnWidth + effectiveGridSpacing.gutterCss);
+      xLines.push(start, start + columnWidth);
+    }
+    for (let index = 0; index < rows; index += 1) {
+      const start = effectiveGridSpacing.marginCss + index * (rowHeight + effectiveGridSpacing.gutterCss);
+      yLines.push(start, start + rowHeight);
+    }
+    return {
+      marginCss: effectiveGridSpacing.marginCss,
+      gutterCss: effectiveGridSpacing.gutterCss,
+      columns,
+      rows,
+      xLines: dedupeSnapLines(xLines),
+      yLines: dedupeSnapLines(yLines),
+    };
+  }
+
+  function findNearestSnapIndex(lines, value) {
+    if (!Array.isArray(lines) || !lines.length) return 0;
+    let bestIndex = 0;
+    let bestDistance = Infinity;
+    for (let index = 0; index < lines.length; index += 1) {
+      const distance = Math.abs(lines[index] - value);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = index;
+      }
+    }
+    return bestIndex;
+  }
+
+  function getTypeTextSphereHeightCss(rect) {
+    const safeRect = rect || frame.getBoundingClientRect();
+    const screenMetrics =
+      safeRect.width > 1 && safeRect.height > 1 ? getMode5SphereScreenMetrics(safeRect) : null;
+    return Math.max(12, screenMetrics ? screenMetrics.sphereDiameterCss : 48);
+  }
+
+  function getTypeTextFontSizeForActualHeight(targetHeightCss) {
+    const target = Math.max(12, Number(targetHeightCss) || 0);
+    const measureSize = 200;
+    const svgBox = getTypeTextSvgBBox("O", measureSize, measureSize);
+    if (svgBox && Number.isFinite(svgBox.height) && svgBox.height > 1) {
+      return target * (measureSize / svgBox.height);
+    }
+    if (!typeTextMeasureContext) {
+      return target;
+    }
+    typeTextMeasureContext.font = `500 ${measureSize}px "Aeonik Fono", Arial, "Helvetica Neue", sans-serif`;
+    const metrics = typeTextMeasureContext.measureText("O");
+    const actualHeight =
+      Math.abs(metrics.actualBoundingBoxAscent || 0) +
+      Math.abs(metrics.actualBoundingBoxDescent || 0);
+    if (!Number.isFinite(actualHeight) || actualHeight < 1) {
+      return target;
+    }
+    return target * (measureSize / actualHeight);
+  }
+
+  function getTypeTextInkMetrics(text, fontSizeCss, lineHeightCss) {
+    const safeFontSize = Math.max(1, Number(fontSizeCss) || 1);
+    const safeLineHeight = Math.max(safeFontSize, Number(lineHeightCss) || safeFontSize);
+    const svgBox = getTypeTextSvgBBox(text, safeFontSize, safeLineHeight);
+    if (svgBox) {
+      return {
+        left: svgBox.x,
+        top: svgBox.y,
+        width: Math.max(1, svgBox.width),
+        height: Math.max(1, svgBox.height),
+        capTop: svgBox.y,
+        descBottom: svgBox.y + svgBox.height,
+      };
+    }
+    if (!typeTextMeasureContext) {
+      return { left: 0, top: 0, width: safeFontSize, height: safeLineHeight };
+    }
+    typeTextMeasureContext.font = `500 ${safeFontSize}px "Aeonik Fono", Arial, "Helvetica Neue", sans-serif`;
+    const metrics = typeTextMeasureContext.measureText(String(text || "") || "O");
+    const left = Number.isFinite(metrics.actualBoundingBoxLeft)
+      ? -metrics.actualBoundingBoxLeft
+      : 0;
+    const top = Number.isFinite(metrics.actualBoundingBoxAscent)
+      ? -metrics.actualBoundingBoxAscent
+      : 0;
+    const width = Number.isFinite(metrics.actualBoundingBoxLeft) &&
+      Number.isFinite(metrics.actualBoundingBoxRight)
+      ? metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight
+      : Math.max(1, metrics.width || safeFontSize);
+    const height = Number.isFinite(metrics.actualBoundingBoxAscent) &&
+      Number.isFinite(metrics.actualBoundingBoxDescent)
+      ? metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
+      : safeLineHeight;
+    return {
+      left,
+      top,
+      width: Math.max(1, width),
+      height: Math.max(1, height),
+      capTop: top,
+      descBottom: top + height,
+    };
+  }
+
+  function getTypeTextEdgeInsetCss(fontSizeCss) {
+    const baseInset = clamp((Number(fontSizeCss) || 0) * 0.012, 0.75, 2.5);
+    return {
+      x: baseInset,
+      y: baseInset + 0.95,
+    };
+  }
+
+  function getTypeTextBoxById(id) {
+    return state.typeTextBoxes.find((item) => item.id === id) || null;
+  }
+
+  function normalizeTypeTextValue(value) {
+    return String(value || "")
+      .replace(/\r\n?/g, "\n")
+      .replace(/\u00a0/g, " ")
+      .replace(/\n$/, "");
+  }
+
+  function readTypeTextContent(element) {
+    if (!element) return "";
+    const raw = typeof element.innerText === "string" ? element.innerText : element.textContent || "";
+    return normalizeTypeTextValue(raw);
+  }
+
+  function setActiveTypeTextBox(id) {
+    state.activeTypeTextBoxId = getTypeTextBoxById(id) ? id : null;
+    syncTypeTextControls();
+  }
+
+  function getActiveTypeTextBox() {
+    return getTypeTextBoxById(state.activeTypeTextBoxId);
+  }
+
+  function syncTypeTextControls() {
+    const activeBox = getActiveTypeTextBox();
+    syncTypeTextButton();
+    if (typeTextScaleUpButton) {
+      typeTextScaleUpButton.disabled = !activeBox || !canUseTypeLayoutEditing();
+    }
+    if (typeTextScaleDownButton) {
+      typeTextScaleDownButton.disabled = !activeBox || !canUseTypeLayoutEditing();
+    }
+    if (typeTextAlignSelect) {
+      typeTextAlignSelect.disabled = !activeBox || !canUseTypeLayoutEditing();
+      if (activeBox && document.activeElement !== typeTextAlignSelect) {
+        typeTextAlignSelect.value = activeBox.align || "left";
+      }
+    }
+  }
+
+  function getClosestTypeTextCorner(localX, localY, width, height) {
+    const corners = [
+      { key: "tl", x: 0, y: 0 },
+      { key: "tr", x: width, y: 0 },
+      { key: "bl", x: 0, y: height },
+      { key: "br", x: width, y: height },
+    ];
+    let bestKey = "tl";
+    let bestDistance = Infinity;
+    for (const corner of corners) {
+      const distance = Math.hypot(localX - corner.x, localY - corner.y);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestKey = corner.key;
+      }
+    }
+    return bestKey;
+  }
+
+  function getTypeTextRootPositionForCorner(corner, xTarget, yTarget, width, height) {
+    switch (corner) {
+      case "tr":
+        return { left: xTarget - width, top: yTarget };
+      case "bl":
+        return { left: xTarget, top: yTarget - height };
+      case "br":
+        return { left: xTarget - width, top: yTarget - height };
+      case "tl":
+      default:
+        return { left: xTarget, top: yTarget };
+    }
+  }
+
+  function getTypeTextVerticalAnchor(corner) {
+    return corner === "bl" || corner === "br" ? "bottom" : "top";
+  }
+
+  function getTypeTextAnchorOffsets(corner, inset) {
+    const horizontal = corner === "tr" || corner === "br" ? -inset.x : inset.x;
+    const vertical = corner === "bl" || corner === "br" ? -inset.y : inset.y;
+    return { x: horizontal, y: vertical };
+  }
+
+  function beginTypeTextEditing(item, entry) {
+    if (!item || !entry) return;
+    setActiveTypeTextBox(item.id);
+    item.isEditing = true;
+    entry.root.classList.add("is-editing");
+    entry.content.contentEditable = "true";
+    entry.content.focus();
+    const selection = window.getSelection();
+    if (selection) {
+      const range = document.createRange();
+      range.selectNodeContents(entry.content);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  }
+
+  function endTypeTextEditing(item, entry) {
+    if (!item || !entry) return;
+    item.isEditing = false;
+    entry.root.classList.remove("is-editing");
+    entry.content.contentEditable = "false";
+    item.text = readTypeTextContent(entry.content);
+  }
+
+  function scaleActiveTypeTextBox(multiplier) {
+    const activeBox = getActiveTypeTextBox();
+    if (!activeBox) return;
+    const base = Number(activeBox.scaleMultiplier) || 1;
+    activeBox.scaleMultiplier = clamp(base * multiplier, 0.125, 64);
+    updateTypeTextLayer();
+  }
+
+  function setActiveTypeTextAlign(value) {
+    const activeBox = getActiveTypeTextBox();
+    if (!activeBox) return;
+    activeBox.align = value === "center" ? "center" : "left";
+    if (activeBox.align === "center") {
+      activeBox.anchorCorner = getTypeTextVerticalAnchor(activeBox.anchorCorner) === "bottom" ? "bl" : "tl";
+    }
+    updateTypeTextLayer();
+  }
+
+  function removeTypeTextBoxElement(id) {
+    const entry = typeTextBoxElements.get(id);
+    if (entry && entry.root && entry.root.parentNode) {
+      entry.root.parentNode.removeChild(entry.root);
+    }
+    typeTextBoxElements.delete(id);
+    if (state.activeTypeTextBoxId === id) {
+      state.activeTypeTextBoxId = null;
+      syncTypeTextControls();
+    }
+  }
+
+  function createTypeTextBoxElement(item) {
+    if (!typeTextLayer) return null;
+    const root = document.createElement("div");
+    root.className = "type-text-box";
+    root.dataset.id = item.id;
+
+    const content = document.createElement("div");
+    content.className = "type-text-box-content";
+    content.contentEditable = "false";
+    content.spellcheck = false;
+    content.setAttribute("data-placeholder", "Text");
+    content.textContent = item.text;
+    ["tl", "tr", "bl", "br"].forEach((corner) => {
+      const dot = document.createElement("span");
+      dot.className = "type-text-box-corner";
+      dot.dataset.corner = corner;
+      root.appendChild(dot);
+    });
+
+    root.addEventListener("pointerdown", (event) => {
+      if (!canUseTypeLayoutEditing() || item.isEditing) return;
+      if (event.button !== 0) return;
+      const target = getTypeTextBoxById(item.id);
+      if (!target) return;
+      const rootRect = root.getBoundingClientRect();
+      const localX = event.clientX - rootRect.left;
+      const localY = event.clientY - rootRect.top;
+      if (target.align === "center") {
+        typeTextDrag = {
+          id: item.id,
+          pointerId: event.pointerId,
+          startClientX: event.clientX,
+          startClientY: event.clientY,
+          active: false,
+          pendingAnchorCorner: localY <= rootRect.height * 0.5 ? "tl" : "bl",
+        };
+      } else {
+        typeTextDrag = {
+          id: item.id,
+          pointerId: event.pointerId,
+          startClientX: event.clientX,
+          startClientY: event.clientY,
+          active: false,
+          pendingAnchorCorner: getClosestTypeTextCorner(
+            localX,
+            localY,
+            rootRect.width,
+            rootRect.height,
+          ),
+        };
+      }
+      setActiveTypeTextBox(item.id);
+      root.setPointerCapture(event.pointerId);
+    });
+
+    root.addEventListener("pointermove", (event) => {
+      if (!typeTextDrag || typeTextDrag.id !== item.id || typeTextDrag.pointerId !== event.pointerId) {
+        return;
+      }
+      const target = getTypeTextBoxById(item.id);
+      if (!target) return;
+      if (!typeTextDrag.active) {
+        const moved = Math.hypot(
+          event.clientX - typeTextDrag.startClientX,
+          event.clientY - typeTextDrag.startClientY,
+        );
+        if (moved < 4) {
+          return;
+        }
+        typeTextDrag.active = true;
+        target.anchorCorner = typeTextDrag.pendingAnchorCorner || target.anchorCorner || "tl";
+        root.classList.add("is-dragging");
+      }
+      const rect = frame.getBoundingClientRect();
+      const gridMetrics = getTypeGridSnapMetrics(rect);
+      const localX = event.clientX - rect.left;
+      const localY = event.clientY - rect.top;
+      if (target.align !== "center") {
+        target.xLine = findNearestSnapIndex(gridMetrics.xLines, localX);
+      }
+      target.yLine = findNearestSnapIndex(gridMetrics.yLines, localY);
+      updateTypeTextLayer();
+    });
+
+    const endDrag = (event) => {
+      if (!typeTextDrag || typeTextDrag.id !== item.id) return;
+      if (event && "pointerId" in event && typeTextDrag.pointerId !== event.pointerId) {
+        return;
+      }
+      if (event && root.hasPointerCapture(event.pointerId)) {
+        root.releasePointerCapture(event.pointerId);
+      }
+      typeTextDrag = null;
+      root.classList.remove("is-dragging");
+    };
+
+    root.addEventListener("pointerup", endDrag);
+    root.addEventListener("pointercancel", endDrag);
+
+    root.addEventListener("dblclick", (event) => {
+      if (!canUseTypeLayoutEditing()) return;
+      event.preventDefault();
+      event.stopPropagation();
+      beginTypeTextEditing(item, typeTextBoxElements.get(item.id));
+    });
+
+    content.addEventListener("input", () => {
+      const target = getTypeTextBoxById(item.id);
+      if (!target) return;
+      target.text = readTypeTextContent(content);
+      updateTypeTextLayer();
+    });
+
+    content.addEventListener("focus", () => {
+      root.classList.add("is-editing");
+    });
+
+    content.addEventListener("blur", () => {
+      const target = getTypeTextBoxById(item.id);
+      if (!target) return;
+      endTypeTextEditing(target, typeTextBoxElements.get(item.id));
+      updateTypeTextLayer();
+    });
+
+    root.appendChild(content);
+    typeTextLayer.appendChild(root);
+
+    const entry = { root, content };
+    typeTextBoxElements.set(item.id, entry);
+    return entry;
+  }
+
+  function syncTypeTextButton() {
+    if (!typeAddTextButton) return;
+    typeAddTextButton.disabled = !canUseTypeLayoutEditing();
+  }
+
+  function updateTypeTextLayer() {
+    if (!typeTextLayer || !frame) return;
+    const active = canUseTypeLayoutEditing();
+    frame.classList.toggle("type-text-active", active && state.typeTextBoxes.length > 0);
+    typeTextLayer.setAttribute("aria-hidden", active && state.typeTextBoxes.length > 0 ? "false" : "true");
+    syncTypeTextControls();
+
+    const validIds = new Set(state.typeTextBoxes.map((item) => item.id));
+    for (const id of typeTextBoxElements.keys()) {
+      if (!validIds.has(id)) {
+        removeTypeTextBoxElement(id);
+      }
+    }
+
+    if (!active) {
+      return;
+    }
+
+    const rect = frame.getBoundingClientRect();
+    const gridMetrics = getTypeGridSnapMetrics(rect);
+    const sphereHeightCss = getTypeTextSphereHeightCss(rect);
+    for (const item of state.typeTextBoxes) {
+      let entry = typeTextBoxElements.get(item.id);
+      if (!entry) {
+        entry = createTypeTextBoxElement(item);
+      }
+      if (!entry) continue;
+      const maxXIndex = Math.max(0, gridMetrics.xLines.length - 1);
+      const maxYIndex = Math.max(0, gridMetrics.yLines.length - 1);
+      item.xLine = clamp(Math.round(item.xLine || 0), 0, maxXIndex);
+      item.yLine = clamp(Math.round(item.yLine || 0), 0, maxYIndex);
+      const targetLeftCss = gridMetrics.xLines[item.xLine] || gridMetrics.marginCss;
+      const targetTopCss = gridMetrics.yLines[item.yLine] || gridMetrics.marginCss;
+      const scaleMultiplier = Math.max(0.125, Number(item.scaleMultiplier) || 1);
+      const actualFontSizeCss = getTypeTextFontSizeForActualHeight(sphereHeightCss) * scaleMultiplier;
+      const lineHeightCss = actualFontSizeCss;
+      const inkMetrics = getTypeTextInkMetrics(item.text, actualFontSizeCss, lineHeightCss);
+      entry.content.style.fontSize = `${actualFontSizeCss}px`;
+      entry.content.style.lineHeight = `${lineHeightCss}px`;
+      entry.content.style.textAlign = item.align === "center" ? "center" : "left";
+      entry.content.style.width =
+        item.align === "center"
+          ? `${Math.max(1, inkMetrics.width)}px`
+          : "max-content";
+      if (document.activeElement !== entry.content && entry.content.textContent !== item.text) {
+        entry.content.textContent = item.text;
+      }
+      const visibleBounds = {
+        left: inkMetrics.left,
+        top: inkMetrics.top,
+        width: Math.max(1, inkMetrics.width),
+        height: Math.max(1, inkMetrics.height),
+      };
+      const rootWidth = Math.max(1, visibleBounds.width);
+      const rootHeight = Math.max(1, visibleBounds.height);
+      const anchorCorner = item.anchorCorner || "tl";
+      const verticalAnchor = getTypeTextVerticalAnchor(anchorCorner);
+      const rootTop = verticalAnchor === "bottom" ? targetTopCss - rootHeight : targetTopCss;
+      let rootLeft = 0;
+      if (item.align === "center") {
+        rootLeft = rect.width * 0.5 - rootWidth * 0.5;
+      } else if (anchorCorner === "tr" || anchorCorner === "br") {
+        rootLeft = targetLeftCss - rootWidth;
+      } else {
+        rootLeft = targetLeftCss;
+      }
+      entry.root.style.left = `${rootLeft}px`;
+      entry.root.style.top = `${rootTop}px`;
+      entry.root.style.width = `${rootWidth}px`;
+      entry.root.style.height = `${rootHeight}px`;
+      entry.root.classList.toggle("is-active", state.activeTypeTextBoxId === item.id);
+      entry.root.classList.toggle("is-editing", !!item.isEditing);
+      entry.content.style.left = `${-visibleBounds.left}px`;
+      entry.content.style.top = `${-visibleBounds.top}px`;
+    }
+  }
+
+  function addTypeTextBox() {
+    if (!canUseTypeLayoutEditing()) return;
+    const rect = frame.getBoundingClientRect();
+    const gridMetrics = getTypeGridSnapMetrics(rect);
+    const startIndex = Math.min(
+      state.typeTextBoxes.length * 2,
+      Math.max(0, gridMetrics.yLines.length - 1),
+    );
+    const item = {
+      id: `type-text-${nextTypeTextBoxId++}`,
+      text: "Text",
+      xLine: 0,
+      yLine: startIndex,
+      anchorCorner: "tl",
+      scaleMultiplier: 1,
+      align: "left",
+      isEditing: false,
+    };
+    state.typeTextBoxes.push(item);
+    setActiveTypeTextBox(item.id);
+    updateTypeTextLayer();
+    const entry = typeTextBoxElements.get(item.id);
+    if (entry) {
+      beginTypeTextEditing(item, entry);
+    }
+  }
+
+  function renderTypeGridColumns() {
+    if (!typeGridColumnsLayer) return;
+    const targetCount = Math.max(constants.minTypeGridColumns, state.typeGridColumns);
+    while (typeGridColumnsLayer.children.length < targetCount) {
+      const column = document.createElement("span");
+      column.className = "type-grid-column";
+      typeGridColumnsLayer.appendChild(column);
+    }
+    while (typeGridColumnsLayer.children.length > targetCount) {
+      typeGridColumnsLayer.removeChild(typeGridColumnsLayer.lastChild);
+    }
+  }
+
+  function renderTypeGridRows() {
+    if (!typeGridRowsLayer) return;
+    const targetCount = Math.max(constants.minTypeGridBaseline, state.typeGridBaseline);
+    while (typeGridRowsLayer.children.length < targetCount) {
+      const row = document.createElement("span");
+      row.className = "type-grid-row";
+      typeGridRowsLayer.appendChild(row);
+    }
+    while (typeGridRowsLayer.children.length > targetCount) {
+      typeGridRowsLayer.removeChild(typeGridRowsLayer.lastChild);
+    }
+  }
+
+  function applyTypeGridState() {
+    if (!frame || !typeGrid) return;
+    const effectiveGridSpacing = getEffectiveTypeGridSpacing();
+    frame.classList.toggle("type-grid-visible", !!state.typeGridVisible);
+    frame.style.setProperty("--type-grid-columns", String(state.typeGridColumns));
+    frame.style.setProperty("--type-grid-rows", String(state.typeGridBaseline));
+    frame.style.setProperty("--type-grid-margin", `${effectiveGridSpacing.marginCss}px`);
+    frame.style.setProperty("--type-grid-gutter", `${effectiveGridSpacing.gutterCss}px`);
+    renderTypeGridColumns();
+    renderTypeGridRows();
+    syncTypeGridInputs();
+    updateTypeTextLayer();
+  }
+
+  function setTypeGridVisible(value) {
+    state.typeGridVisible = !!value;
+    applyTypeGridState();
+  }
+
+  function setTypeLayout(value) {
+    const next = value === "layout1" ? "layout1" : "free";
+    state.typeLayout = next;
+    typeTextDrag = null;
+    if (next !== "free") {
+      isDraggingModel = false;
+      dragModelMode = "rotate";
+      rotVelX = 0;
+      rotVelY = 0;
+      rotVelZ = 0;
+    }
+    updateTypographyShapeVisibility();
+    syncTypeGridInputs();
+  }
+
+  function setTypeMarkMode(value) {
+    if (state.typeLayout1EndColumn !== 1) {
+      state.typeMarkMode =
+        value === "separate" || value === "wordmark" ? value : "icon";
+    } else {
+      state.typeMarkMode =
+        value === "combination" || value === "separate" || value === "wordmark"
+          ? value
+          : "icon";
+    }
+    updateTypographyShapeVisibility();
+    syncTypeGridInputs();
+  }
+
+  function setTypeLayout1EndColumn(value) {
+    const raw = Math.round(Number(value));
+    const next =
+      raw === 1 || raw === 2 || raw === 3 || raw === 6
+        ? raw
+        : constants.defaultTypeLayout1EndColumn;
+    state.typeLayout1EndColumn = next;
+    if (next !== 1 && state.typeMarkMode === "combination") {
+      state.typeMarkMode = "icon";
+    }
+    syncTypeGridInputs();
+  }
+
+  function updateTypographyShapeVisibility() {
+    if (!canvas) return;
+    const hideShape =
+      state.playMode === "off" &&
+      state.typeLayout === "layout1" &&
+      state.typeMarkMode === "wordmark";
+    canvas.style.opacity = hideShape ? "0" : "1";
+    canvas.style.pointerEvents = hideShape ? "none" : "";
+  }
+
+  function setTypeGridColumns(value) {
+    const next = clamp(
+      Math.round(Number(value)),
+      constants.minTypeGridColumns,
+      constants.maxTypeGridColumns,
+    );
+    if (!Number.isFinite(next)) return;
+    state.typeGridColumns = next;
+    applyTypeGridState();
+  }
+
+  function setTypeGridMargin(value) {
+    const next = clamp(
+      Math.round(Number(value)),
+      constants.minTypeGridMargin,
+      constants.maxTypeGridMargin,
+    );
+    if (!Number.isFinite(next)) return;
+    state.typeGridMargin = next;
+    applyTypeGridState();
+  }
+
+  function setTypeGridGutter(value) {
+    const next = clamp(
+      Math.round(Number(value)),
+      constants.minTypeGridGutter,
+      constants.maxTypeGridGutter,
+    );
+    if (!Number.isFinite(next)) return;
+    state.typeGridGutter = next;
+    applyTypeGridState();
+  }
+
+  function setTypeGridBaseline(value) {
+    const next = clamp(
+      Math.round(Number(value)),
+      constants.minTypeGridBaseline,
+      constants.maxTypeGridBaseline,
+    );
+    if (!Number.isFinite(next)) return;
+    state.typeGridBaseline = next;
+    applyTypeGridState();
+  }
+
+  function applyTypographyLayout() {
+    if (state.playMode !== "off") return;
+    if (state.typeLayout !== "layout1") return;
+    const rect = frame.getBoundingClientRect();
+    const metrics = computeShapeProjectedMetrics();
+    if (!metrics) return;
+    const totalColumns = Math.max(1, Math.min(6, state.typeGridColumns));
+    const endColumn = clamp(state.typeLayout1EndColumn, 1, totalColumns);
+    let effectiveGridSpacing = getEffectiveTypeGridSpacing(rect);
+    const availableCssWidth =
+      rect.width -
+      effectiveGridSpacing.marginCss * 2 -
+      effectiveGridSpacing.gutterCss * (totalColumns - 1);
+    const columnWidthCss = Math.max(1, availableCssWidth / totalColumns);
+    const targetWidthCss =
+      columnWidthCss * endColumn +
+      effectiveGridSpacing.gutterCss * Math.max(0, endColumn - 1);
+    const targetWidthPx = targetWidthCss * (metrics.width / Math.max(1, rect.width));
+    if (targetWidthPx > 1 && Number.isFinite(targetWidthPx)) {
+      const widthRatio = metrics.boundsWidthPx / targetWidthPx;
+      if (Math.abs(1 - widthRatio) > 0.002) {
+        setCameraZoom(state.cameraZ * widthRatio);
+      }
+    }
+    effectiveGridSpacing = getEffectiveTypeGridSpacing(rect);
+    const refreshedMetrics = computeShapeProjectedMetrics();
+    if (!refreshedMetrics) return;
+    const insetCss = effectiveGridSpacing.marginCss;
+    const cssToCanvasX = refreshedMetrics.width / Math.max(1, rect.width);
+    const cssToCanvasY = refreshedMetrics.height / Math.max(1, rect.height);
+    const targetLeftPx = insetCss * cssToCanvasX;
+    const targetTopPx = insetCss * cssToCanvasY;
+    const targetCenterX = targetLeftPx + refreshedMetrics.boundsWidthPx * 0.5;
+    const targetCenterY = targetTopPx + refreshedMetrics.boundsHeightPx * 0.5;
+    const offset = computeShapeProjectedOffsetWorld(targetCenterX, targetCenterY, refreshedMetrics);
+    stage.pos[0] += offset.x;
+    stage.pos[1] += offset.y;
+  }
+
+  function updateTypographyOlabLockup() {
+    if (!typeOlabInstance || !typeOlabInstance.wrap || !typeOlabInstance.svg) return;
+    if (
+      state.playMode !== "off" ||
+      state.typeLayout !== "layout1" ||
+      state.typeMarkMode === "icon"
+    ) {
+      typeOlabInstance.wrap.style.display = "none";
+      typeOlabInstance.wrap.setAttribute("aria-hidden", "true");
+      return;
+    }
+    const metrics = computeShapeProjectedMetrics();
+    if (!metrics) {
+      typeOlabInstance.wrap.style.display = "none";
+      typeOlabInstance.wrap.setAttribute("aria-hidden", "true");
+      return;
+    }
+    const rect = frame.getBoundingClientRect();
+    const effectiveGridSpacing = getEffectiveTypeGridSpacing(rect);
+    const totalColumns = Math.max(1, Math.min(6, state.typeGridColumns));
+    const endColumn = clamp(state.typeLayout1EndColumn, 1, totalColumns);
+    const availableCssWidth =
+      rect.width -
+      effectiveGridSpacing.marginCss * 2 -
+      effectiveGridSpacing.gutterCss * (totalColumns - 1);
+    const columnWidthCss = Math.max(1, availableCssWidth / totalColumns);
+    const targetWidthCss =
+      columnWidthCss * endColumn +
+      effectiveGridSpacing.gutterCss * Math.max(0, endColumn - 1);
+    const pxToCssX = rect.width / Math.max(1, metrics.width);
+    const pxToCssY = rect.height / Math.max(1, metrics.height);
+    const leftCss =
+      state.typeMarkMode === "wordmark" ? effectiveGridSpacing.marginCss : metrics.minX * pxToCssX;
+    const topCss =
+      state.typeMarkMode === "wordmark" ? effectiveGridSpacing.marginCss : metrics.maxY * pxToCssY;
+    const widthCss =
+      state.typeMarkMode === "wordmark" ? targetWidthCss : metrics.boundsWidthPx * pxToCssX;
+    const heightCss =
+      widthCss * (constants.mode5OlabViewHeightSvg / constants.mode5OlabViewWidthSvg);
+    const gapCss = widthCss * constants.typeCombinationGapWidthRatio;
+    const targetTopCss =
+      state.typeMarkMode === "wordmark"
+        ? topCss
+        : state.typeMarkMode === "separate"
+        ? Math.max(
+            effectiveGridSpacing.marginCss,
+            rect.height - effectiveGridSpacing.marginCss - heightCss,
+          )
+        : topCss + gapCss;
+    const olabCenterX = (constants.mode5OlabOCenterXSvg / constants.mode5OlabViewWidthSvg) * widthCss;
+    const olabCenterY = (constants.mode5OlabOCenterYSvg / constants.mode5OlabViewHeightSvg) * heightCss;
+
+    typeOlabInstance.wrap.style.left = `${leftCss}px`;
+    typeOlabInstance.wrap.style.top = `${targetTopCss}px`;
+    typeOlabInstance.wrap.style.width = `${widthCss}px`;
+    typeOlabInstance.wrap.style.height = `${heightCss}px`;
+    typeOlabInstance.wrap.style.transformOrigin = `${olabCenterX}px ${olabCenterY}px`;
+    typeOlabInstance.wrap.style.transform = "none";
+    typeOlabInstance.svg.style.transform = "none";
+    typeOlabInstance.wrap.style.display = "block";
+    typeOlabInstance.wrap.setAttribute("aria-hidden", "false");
   }
 
   let frameImageObjectUrl = null;
@@ -3540,6 +4594,10 @@
     return {
       width,
       height,
+      minX: stats.minX,
+      maxX: stats.maxX,
+      minY: stats.minY,
+      maxY: stats.maxY,
       centerX: (stats.minX + stats.maxX) * 0.5,
       centerY: (stats.minY + stats.maxY) * 0.5,
       boundsWidthPx: Math.max(1, stats.maxX - stats.minX),
@@ -3775,6 +4833,7 @@
 
   canvas.addEventListener("pointerdown", (event) => {
     if (state.playMode !== "off") return;
+    if (state.typeLayout !== "free") return;
     if (event.button !== 0 && event.button !== 2) return;
     isDraggingModel = true;
     dragModelMode = event.button === 2 ? "pan" : "rotate";
@@ -3834,6 +4893,9 @@
 
   function handleZoomWheel(event) {
     event.preventDefault();
+    if (state.playMode === "off" && state.typeLayout !== "free") {
+      return;
+    }
     setCameraZoom(state.cameraZ + event.deltaY * 0.03);
   }
 
@@ -4183,6 +5245,101 @@
     });
   }
 
+  if (framePresetSelect) {
+    framePresetSelect.addEventListener("change", () => {
+      const preset = framePresets[framePresetSelect.value] || framePresets.custom;
+      state.framePreset = framePresetSelect.value in framePresets ? framePresetSelect.value : "custom";
+      applyFrameSize(preset.width, preset.height);
+    });
+  }
+
+  if (typeGridToggle) {
+    typeGridToggle.addEventListener("change", () => {
+      setTypeGridVisible(typeGridToggle.checked);
+    });
+  }
+
+  if (typeLayoutSelect) {
+    typeLayoutSelect.addEventListener("change", () => {
+      setTypeLayout(typeLayoutSelect.value);
+    });
+  }
+
+  if (typeMarkModeSelect) {
+    typeMarkModeSelect.addEventListener("change", () => {
+      setTypeMarkMode(typeMarkModeSelect.value);
+    });
+  }
+
+  if (typeAddTextButton) {
+    typeAddTextButton.addEventListener("click", () => {
+      addTypeTextBox();
+    });
+  }
+
+  if (typeTextScaleUpButton) {
+    typeTextScaleUpButton.addEventListener("click", () => {
+      scaleActiveTypeTextBox(2);
+    });
+  }
+
+  if (typeTextScaleDownButton) {
+    typeTextScaleDownButton.addEventListener("click", () => {
+      scaleActiveTypeTextBox(0.5);
+    });
+  }
+
+  if (typeTextAlignSelect) {
+    typeTextAlignSelect.addEventListener("change", () => {
+      setActiveTypeTextAlign(typeTextAlignSelect.value);
+    });
+  }
+
+  if (typeLayout1EndColInput) {
+    typeLayout1EndColInput.addEventListener("input", () => {
+      setTypeLayout1EndColumn(typeLayout1EndColInput.value);
+    });
+    typeLayout1EndColInput.addEventListener("blur", () => {
+      syncTypeGridInputs();
+    });
+  }
+
+  if (typeGridColumnsInput) {
+    typeGridColumnsInput.addEventListener("input", () => {
+      setTypeGridColumns(typeGridColumnsInput.value);
+    });
+    typeGridColumnsInput.addEventListener("blur", () => {
+      syncTypeGridInputs();
+    });
+  }
+
+  if (typeGridMarginInput) {
+    typeGridMarginInput.addEventListener("input", () => {
+      setTypeGridMargin(typeGridMarginInput.value);
+    });
+    typeGridMarginInput.addEventListener("blur", () => {
+      syncTypeGridInputs();
+    });
+  }
+
+  if (typeGridGutterInput) {
+    typeGridGutterInput.addEventListener("input", () => {
+      setTypeGridGutter(typeGridGutterInput.value);
+    });
+    typeGridGutterInput.addEventListener("blur", () => {
+      syncTypeGridInputs();
+    });
+  }
+
+  if (typeGridBaselineInput) {
+    typeGridBaselineInput.addEventListener("input", () => {
+      setTypeGridBaseline(typeGridBaselineInput.value);
+    });
+    typeGridBaselineInput.addEventListener("blur", () => {
+      syncTypeGridInputs();
+    });
+  }
+
   frameWidthInput.addEventListener("input", () => {
     const raw = Number(frameWidthInput.value);
     if (!Number.isFinite(raw)) return;
@@ -4285,7 +5442,18 @@
       constants.defaultFrustumLargeDiameterSvg / constants.defaultFrustumLengthSvg;
     state.cameraZ = constants.defaultCameraZ;
     state.perspectiveFovDeg = constants.defaultPerspectiveFovDeg;
+    state.framePreset = "custom";
     state.frameBgColor = constants.defaultFrameBgColor;
+    state.typeGridVisible = constants.defaultTypeGridVisible;
+    state.typeLayout = constants.defaultTypeLayout;
+    state.typeMarkMode = constants.defaultTypeMarkMode;
+    state.typeLayout1EndColumn = constants.defaultTypeLayout1EndColumn;
+    state.typeGridColumns = constants.defaultTypeGridColumns;
+    state.typeGridMargin = constants.defaultTypeGridMargin;
+    state.typeGridGutter = constants.defaultTypeGridGutter;
+    state.typeGridBaseline = constants.defaultTypeGridBaseline;
+    state.typeTextBoxes = [];
+    state.activeTypeTextBoxId = null;
     state.depthBlur = false;
     state.depthDynamic = false;
     playMode1.environmentEnabled = constants.defaultPlay1EnvironmentEnabled;
@@ -4333,6 +5501,7 @@
     updateCameraUniforms();
     syncZoomInputs();
     applyFrameBackgroundColor(state.frameBgColor);
+    applyTypeGridState();
     applyFrameSize(constants.defaultFrameWidth, constants.defaultFrameHeight);
     updatePlay1EnvironmentVisual();
     updateRotationInputs();
@@ -4594,8 +5763,12 @@
   rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
   updateCameraUniforms();
   applyFrameBackgroundColor(state.frameBgColor);
+  applyTypeGridState();
   updateWorkspaceShellBounds();
   applyFrameSize(state.frameWidth, state.frameHeight);
+  updateTypographyShapeVisibility();
+  updateTypeTextLayer();
+  updateTypographyOlabLockup();
   syncZoomInputs();
   updateRotationInputs();
 
@@ -4675,7 +5848,15 @@
       rotVelY *= 0.92;
       rotVelX *= 0.92;
       rotVelZ *= 0.92;
+      if (state.typeLayout === "layout1") {
+        applyTypeGridState();
+      }
+      applyTypographyLayout();
     }
+
+    updateTypographyShapeVisibility();
+    updateTypeTextLayer();
+    updateTypographyOlabLockup();
 
     sphereObject.rot[1] = 0;
     frustumObject.rot[0] = 0;
@@ -4804,6 +5985,12 @@
     }
 
     requestAnimationFrame(render);
+  }
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => {
+      updateTypeTextLayer();
+    });
   }
 
   requestAnimationFrame(render);
