@@ -45,9 +45,13 @@
   const mode6Controls = document.getElementById("mode6-controls");
   const mode5CenterModeSelect = document.getElementById("mode5-center-mode");
   const mode5StackToggle = document.getElementById("mode5-stack-toggle");
+  const mode5ShapeSpinSecondsInput = document.getElementById("mode5-shape-spin-seconds-input");
+  const mode5ShapeHoldSecondsInput = document.getElementById("mode5-shape-hold-seconds-input");
   const mode6SegmentsList = document.getElementById("mode6-segments-list");
   const mode6PositionEditor = document.getElementById("mode6-position-editor");
   const mode6AddSegmentButton = document.getElementById("mode6-add-segment-btn");
+  const mode6AddImageSegmentButton = document.getElementById("mode6-add-image-segment-btn");
+  const mode6SegmentImageInput = document.getElementById("mode6-segment-image-input");
   const mode6DistributionSelect = document.getElementById("mode6-distribution-mode");
   const mode6SphereRadiusRange = document.getElementById("mode6-sphere-radius-range");
   const mode6SphereRadiusNumber = document.getElementById("mode6-sphere-radius-number");
@@ -282,7 +286,6 @@
     minMode4ExpandedLengthSvg: 489.493138,
     maxMode4ExpandedLengthSvg: 10000,
     defaultMode4ExpandedLengthSvg: 3500,
-    fixedPlay3LengthSvg: 10000,
     minMode4Ease: 0,
     maxMode4Ease: 1,
     defaultMode4Ease: 1,
@@ -316,6 +319,8 @@
     defaultTypeGridBaseline: 6,
     minTypeGridBaseline: 6,
     maxTypeGridBaseline: 6,
+    typeFrameLetterSpacingEm: -0.03,
+    mode6TextLetterSpacingEm: 0,
     typeFontUnitsPerEm: 1000,
     typeFontCapHeight: 700,
     typeFontDescender: 205,
@@ -328,9 +333,17 @@
     maxPerspectiveEffectiveFovDeg: 170,
     minPerspectiveEffectiveFovDeg: 12,
     defaultPlay1EnvironmentEnabled: false,
+    defaultPlay1PerspectiveFovDeg: 130,
     defaultPlay6ZoomZ: 57.6,
     defaultPlay6PerspectiveFovDeg: 130,
+    defaultPlay7PerspectiveFovDeg: 50,
     playMode4BaseGreen: [0, 1, 0],
+    minMode5ShapeSpinMs: 300,
+    maxMode5ShapeSpinMs: 20000,
+    defaultMode5ShapeSpinMs: 1700,
+    minMode5ShapeHoldMs: 0,
+    maxMode5ShapeHoldMs: 20000,
+    defaultMode5ShapeHoldMs: 0,
     mode5OlabViewWidthSvg: 155,
     mode5OlabViewHeightSvg: 47,
     mode5OlabODiameterSvg: 37.9085,
@@ -344,6 +357,7 @@
       "Turntable",
       "32MP Telephoto\nSnapdragon",
     ],
+    defaultMode6SegmentType: "text",
     defaultMode6CameraZ: 78,
     defaultMode6TopPaddingRatio: 0.08,
     defaultMode6BottomPaddingRatio: 0.08,
@@ -483,9 +497,18 @@
     depthDynamic: false,
     playMode: "off",
   };
+  const staticSceneView = {
+    cameraZ: state.cameraZ,
+    perspectiveFovDeg: state.perspectiveFovDeg,
+  };
   const videoExport = {
     active: false,
+    mode6LoopElapsedMs: null,
+    mode6SavedState: null,
+    mode5LoopElapsedMs: null,
+    mode5SavedState: null,
   };
+  const mode5ExportTextureCache = new WeakMap();
 
   const typeTextBoxElements = new Map();
   let nextTypeTextBoxId = 1;
@@ -520,19 +543,15 @@
     node.style.fontFamily = '"Aeonik Fono Exact", Arial, "Helvetica Neue", sans-serif';
     node.style.fontWeight = "500";
     node.style.fontSize = `${fontSizeCss}px`;
-    node.style.letterSpacing = "0";
+    node.style.letterSpacing = `${constants.typeFrameLetterSpacingEm}em`;
   }
 
-  function getTypeTextSvgBBox(text, fontSizeCss, lineHeightCss) {
-    if (!typeTextMeasureSvgState) return null;
-    const safeFontSize = Math.max(1, Number(fontSizeCss) || 1);
-    const safeLineHeight = Math.max(safeFontSize, Number(lineHeightCss) || safeFontSize);
+  function populateTypeTextSvgText(textNode, text, lineHeightCss) {
+    if (!textNode) return;
+    const safeLineHeight = Math.max(1, Number(lineHeightCss) || 1);
     const lines = String(text || "").split(/\r?\n/);
     const safeLines = lines.length ? lines : [""];
-    const textNode = typeTextMeasureSvgState.text;
     textNode.replaceChildren();
-    applyTypeTextMeasureFont(textNode, safeFontSize);
-
     for (let index = 0; index < safeLines.length; index += 1) {
       const tspan = document.createElementNS(svgNs, "tspan");
       tspan.setAttribute("x", "0");
@@ -540,6 +559,29 @@
       tspan.textContent = safeLines[index] || " ";
       textNode.appendChild(tspan);
     }
+  }
+
+  function renderTypeTextSvg(entry, text, fontSizeCss, lineHeightCss, bounds) {
+    if (!entry || !entry.svg || !entry.svgText || !bounds) return;
+    const width = Math.max(1, Number(bounds.width) || 1);
+    const height = Math.max(1, Number(bounds.height) || 1);
+    entry.svg.setAttribute("width", `${width}`);
+    entry.svg.setAttribute("height", `${height}`);
+    entry.svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    applyTypeTextMeasureFont(entry.svgText, fontSizeCss);
+    entry.svgText.setAttribute("fill", "currentColor");
+    entry.svgText.setAttribute("text-rendering", "geometricPrecision");
+    entry.svgText.setAttribute("transform", `translate(${-bounds.left} ${-bounds.top})`);
+    populateTypeTextSvgText(entry.svgText, text, lineHeightCss);
+  }
+
+  function getTypeTextSvgBBox(text, fontSizeCss, lineHeightCss) {
+    if (!typeTextMeasureSvgState) return null;
+    const safeFontSize = Math.max(1, Number(fontSizeCss) || 1);
+    const safeLineHeight = Math.max(safeFontSize, Number(lineHeightCss) || safeFontSize);
+    const textNode = typeTextMeasureSvgState.text;
+    applyTypeTextMeasureFont(textNode, safeFontSize);
+    populateTypeTextSvgText(textNode, text, safeLineHeight);
 
     try {
       const bbox = textNode.getBBox();
@@ -1529,6 +1571,7 @@
   let mode6TextUniformTexture = null;
   let mode6TextUniformOpacity = null;
   let mode6TextQuadBuffer = null;
+  let mode6TextMaxTextureSize = 4096;
 
   if (mode6TextGl) {
     mode6TextProgram = createProgramFor(
@@ -1544,6 +1587,10 @@
     mode6TextUniformTexture = mode6TextGl.getUniformLocation(mode6TextProgram, "uTex");
     mode6TextUniformOpacity = mode6TextGl.getUniformLocation(mode6TextProgram, "uOpacity");
     mode6TextQuadBuffer = mode6TextGl.createBuffer();
+    mode6TextMaxTextureSize = Math.max(
+      2048,
+      Number(mode6TextGl.getParameter(mode6TextGl.MAX_TEXTURE_SIZE)) || 4096,
+    );
     mode6TextGl.enable(mode6TextGl.BLEND);
     mode6TextGl.blendFunc(mode6TextGl.SRC_ALPHA, mode6TextGl.ONE_MINUS_SRC_ALPHA);
     mode6TextGl.disable(mode6TextGl.DEPTH_TEST);
@@ -1658,17 +1705,34 @@
     return 90 + (constants.maxPerspectiveEffectiveFovDeg - 90) * eased;
   }
 
+  function getPerspectiveFovRadForRaw(rawValue = state.perspectiveFovDeg) {
+    return (getEffectivePerspectiveFovDeg(rawValue) * Math.PI) / 180;
+  }
+
   function getPerspectiveFovRad() {
-    return (getEffectivePerspectiveFovDeg() * Math.PI) / 180;
+    return getPerspectiveFovRadForRaw(state.perspectiveFovDeg);
+  }
+
+  function getActiveCameraZForView(baseCameraZ, rawPerspective = state.perspectiveFovDeg) {
+    const safeBaseCameraZ = Number.isFinite(baseCameraZ) ? baseCameraZ : state.cameraZ;
+    const referenceTan = Math.tan(
+      getPerspectiveFovRadForRaw(constants.defaultPerspectiveFovDeg) * 0.5,
+    );
+    const currentTan = Math.tan(getPerspectiveFovRadForRaw(rawPerspective) * 0.5);
+    return safeBaseCameraZ * (referenceTan / Math.max(0.0001, currentTan));
   }
 
   function getActiveCameraZ(baseCameraZ) {
-    const safeBaseCameraZ = Number.isFinite(baseCameraZ) ? baseCameraZ : state.cameraZ;
-    const referenceTan = Math.tan(
-      (getEffectivePerspectiveFovDeg(constants.defaultPerspectiveFovDeg) * Math.PI / 180) * 0.5,
-    );
-    const currentTan = Math.tan(getPerspectiveFovRad() * 0.5);
-    return safeBaseCameraZ * (referenceTan / Math.max(0.0001, currentTan));
+    return getActiveCameraZForView(baseCameraZ, state.perspectiveFovDeg);
+  }
+
+  function updateFramePerspective() {
+    if (!frame) return;
+    const rect = frame.getBoundingClientRect();
+    const frameHeightCss =
+      rect && Number.isFinite(rect.height) && rect.height > 1 ? rect.height : state.frameHeight;
+    const perspectivePx = (frameHeightCss * 0.5) / Math.tan(getPerspectiveFovRad() * 0.5);
+    frame.style.perspective = `${clamp(perspectivePx, 40, 12000).toFixed(3)}px`;
   }
 
   function syncPerspectiveInputs() {
@@ -1689,8 +1753,12 @@
       constants.minPerspectiveFovDeg,
       constants.maxPerspectiveFovDeg,
     );
+    if (state.playMode === "off") {
+      staticSceneView.perspectiveFovDeg = state.perspectiveFovDeg;
+    }
     gl.uniform1f(uFovY, getPerspectiveFovRad());
     updateCameraUniforms();
+    updateFramePerspective();
     syncPerspectiveInputs();
     refreshMode6BaseLayout();
   }
@@ -1843,10 +1911,54 @@
     return p;
   }
 
+  function transformToWorldWithStage(localVec, object, stageView) {
+    const safeStage = stageView || {
+      rotX: stage.rotX,
+      rotY: stage.rotY,
+      rotZ: stage.rotZ,
+      posX: stage.pos[0],
+      posY: stage.pos[1],
+      posZ: stage.pos[2],
+    };
+    let p = rotateVecByEuler(localVec, object.rot);
+    p[0] += object.pos[0];
+    p[1] += object.pos[1];
+    p[2] += object.pos[2];
+    p = rotateVecByEuler(p, [safeStage.rotX, safeStage.rotY, safeStage.rotZ]);
+    p[0] += safeStage.posX;
+    p[1] += safeStage.posY;
+    p[2] += safeStage.posZ;
+    return p;
+  }
+
   function projectWorldToScreen(worldVec, width, height, cameraForFit) {
     const activeCameraZ = getActiveCameraZ(cameraForFit);
     const aspect = width / height;
     const f = 1 / Math.tan(getPerspectiveFovRad() * 0.5);
+    const viewZ = worldVec[2] - activeCameraZ;
+    const clipW = -viewZ;
+    if (clipW <= 0.001) return null;
+    const clipX = worldVec[0] * (f / aspect);
+    const clipY = worldVec[1] * f;
+    const ndcX = clipX / clipW;
+    const ndcY = clipY / clipW;
+    return {
+      x: (ndcX * 0.5 + 0.5) * width,
+      y: (1 - (ndcY * 0.5 + 0.5)) * height,
+      depth: clipW,
+    };
+  }
+
+  function projectWorldToScreenWithView(
+    worldVec,
+    width,
+    height,
+    cameraForFit,
+    perspectiveRaw = state.perspectiveFovDeg,
+  ) {
+    const activeCameraZ = getActiveCameraZForView(cameraForFit, perspectiveRaw);
+    const aspect = width / height;
+    const f = 1 / Math.tan(getPerspectiveFovRadForRaw(perspectiveRaw) * 0.5);
     const viewZ = worldVec[2] - activeCameraZ;
     const clipW = -viewZ;
     if (clipW <= 0.001) return null;
@@ -2182,6 +2294,7 @@
     const activeCameraZ = getActiveCameraZ();
     gl.uniform1f(uCameraZ, activeCameraZ);
     gl.uniform3f(uEyePos, 0, 0, activeCameraZ);
+    updateFramePerspective();
   }
 
   function syncZoomInputs() {
@@ -2204,6 +2317,9 @@
     state.cameraZ = next;
     if (state.playMode === "play6") {
       playMode4.zoomZ = next;
+    }
+    if (state.playMode === "off") {
+      staticSceneView.cameraZ = next;
     }
     updateCameraUniforms();
     syncZoomInputs();
@@ -2256,13 +2372,26 @@
       mode4Controls.hidden = state.playMode !== "play6";
     }
     if (mode5Controls) {
-      mode5Controls.hidden = state.playMode !== "play7";
+      mode5Controls.hidden = !(state.playMode === "play4" || state.playMode === "play7");
     }
+    if (mode5StackToggle) {
+      const stackControl = mode5StackToggle.closest(".toggle");
+      if (stackControl) {
+        stackControl.hidden = state.playMode === "play4";
+        stackControl.style.display = state.playMode === "play4" ? "none" : "";
+      }
+      mode5StackToggle.disabled = state.playMode === "play4";
+    }
+    document.querySelectorAll(".mode5-shape-only-control").forEach((control) => {
+      control.hidden = state.playMode !== "play4";
+      control.style.display = state.playMode === "play4" ? "" : "none";
+    });
     if (mode6Controls) {
       mode6Controls.hidden = state.playMode !== "play5";
     }
     syncPlay1EnvironmentToggle();
     syncMode5StackToggleInput();
+    syncMode5ShapeTimingInputs();
     syncMode6FillTextToggleInput();
     syncMode6DistributionInput();
     syncMode6SphereRadiusInputs();
@@ -2325,10 +2454,6 @@
       constants.maxMode4ZoomOutExtra,
     );
     syncMode4MotionInputs();
-  }
-
-  function getFixedPlay3DiameterSvg() {
-    return constants.fixedPlay3LengthSvg * playMode4.defaultScaleRatio;
   }
 
   function updateShadingMode(mode) {
@@ -2492,6 +2617,7 @@
     resizeCanvasToFrame();
     resizeMode6TextCanvas();
     updatePlay1EnvironmentVisual();
+    updateFramePerspective();
     refreshMode6BaseLayout();
   }
 
@@ -2554,9 +2680,11 @@
 
   function getEffectiveTypeGridSpacing(rect) {
     const safeRect = rect || frame.getBoundingClientRect();
-    if (state.typeLayout === "layout1" && state.playMode === "off") {
+    if (state.typeLayout === "layout1") {
       const screenMetrics =
-        safeRect.width > 1 && safeRect.height > 1 ? getMode5SphereScreenMetrics(safeRect) : null;
+        safeRect.width > 1 && safeRect.height > 1
+          ? getMode5SphereScreenMetrics(safeRect, getCanonicalLayoutViewState())
+          : null;
       if (screenMetrics) {
         const gapCss = Math.max(0, screenMetrics.sphereDiameterCss * state.gapRatio);
         const shortSideCss = Math.min(safeRect.width, safeRect.height);
@@ -2806,12 +2934,12 @@
     setActiveTypeTextBox(item.id);
     item.isEditing = true;
     entry.root.classList.add("is-editing");
-    entry.content.contentEditable = "true";
-    entry.content.focus();
+    entry.ink.contentEditable = "true";
+    entry.ink.focus();
     const selection = window.getSelection();
     if (selection) {
       const range = document.createRange();
-      range.selectNodeContents(entry.content);
+      range.selectNodeContents(entry.ink);
       range.collapse(false);
       selection.removeAllRanges();
       selection.addRange(range);
@@ -2822,8 +2950,8 @@
     if (!item || !entry) return;
     item.isEditing = false;
     entry.root.classList.remove("is-editing");
-    entry.content.contentEditable = "false";
-    item.text = readTypeTextContent(entry.content);
+    entry.ink.contentEditable = "false";
+    item.text = readTypeTextContent(entry.ink);
   }
 
   function scaleActiveTypeTextBox(multiplier) {
@@ -2864,10 +2992,24 @@
 
     const content = document.createElement("div");
     content.className = "type-text-box-content";
-    content.contentEditable = "false";
-    content.spellcheck = false;
-    content.setAttribute("data-placeholder", "Text");
-    content.textContent = item.text;
+
+    const svg = document.createElementNS(svgNs, "svg");
+    svg.classList.add("type-text-box-svg");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+
+    const svgText = document.createElementNS(svgNs, "text");
+    svgText.setAttributeNS("http://www.w3.org/XML/1998/namespace", "space", "preserve");
+    svg.appendChild(svgText);
+    content.appendChild(svg);
+
+    const ink = document.createElement("div");
+    ink.className = "type-text-box-ink";
+    ink.contentEditable = "false";
+    ink.spellcheck = false;
+    ink.setAttribute("data-placeholder", "Text");
+    ink.textContent = item.text;
+    content.appendChild(ink);
     ["tl", "tr", "bl", "br"].forEach((corner) => {
       const dot = document.createElement("span");
       dot.className = "type-text-box-corner";
@@ -2962,18 +3104,18 @@
       beginTypeTextEditing(item, typeTextBoxElements.get(item.id));
     });
 
-    content.addEventListener("input", () => {
+    ink.addEventListener("input", () => {
       const target = getTypeTextBoxById(item.id);
       if (!target) return;
-      target.text = readTypeTextContent(content);
+      target.text = readTypeTextContent(ink);
       updateTypeTextLayer();
     });
 
-    content.addEventListener("focus", () => {
+    ink.addEventListener("focus", () => {
       root.classList.add("is-editing");
     });
 
-    content.addEventListener("blur", () => {
+    ink.addEventListener("blur", () => {
       const target = getTypeTextBoxById(item.id);
       if (!target) return;
       endTypeTextEditing(target, typeTextBoxElements.get(item.id));
@@ -2983,7 +3125,7 @@
     root.appendChild(content);
     typeTextLayer.appendChild(root);
 
-    const entry = { root, content };
+    const entry = { root, content, svg, svgText, ink };
     typeTextBoxElements.set(item.id, entry);
     return entry;
   }
@@ -3030,21 +3172,21 @@
       const actualFontSizeCss = getTypeTextFontSizeForActualHeight(sphereHeightCss) * scaleMultiplier;
       const lineHeightCss = actualFontSizeCss;
       const inkMetrics = getTypeTextInkMetrics(item.text, actualFontSizeCss, lineHeightCss);
-      entry.content.style.fontSize = `${actualFontSizeCss}px`;
-      entry.content.style.lineHeight = `${lineHeightCss}px`;
-      entry.content.style.textAlign = item.align === "center" ? "center" : "left";
-      entry.content.style.width =
-        item.align === "center"
-          ? `${Math.max(1, inkMetrics.width)}px`
-          : "max-content";
-      if (document.activeElement !== entry.content && entry.content.textContent !== item.text) {
-        entry.content.textContent = item.text;
+      const visibleWidth = Math.max(1, inkMetrics.width);
+      const visibleHeight = Math.max(1, inkMetrics.height);
+      entry.content.style.width = `${visibleWidth}px`;
+      entry.content.style.height = `${visibleHeight}px`;
+      entry.ink.style.fontSize = `${actualFontSizeCss}px`;
+      entry.ink.style.lineHeight = `${lineHeightCss}px`;
+      entry.ink.style.textAlign = item.align === "center" ? "center" : "left";
+      if (document.activeElement !== entry.ink && entry.ink.textContent !== item.text) {
+        entry.ink.textContent = item.text;
       }
       const visibleBounds = {
         left: inkMetrics.left,
         top: inkMetrics.top,
-        width: Math.max(1, inkMetrics.width),
-        height: Math.max(1, inkMetrics.height),
+        width: visibleWidth,
+        height: visibleHeight,
       };
       const rootWidth = Math.max(1, visibleBounds.width);
       const rootHeight = Math.max(1, visibleBounds.height);
@@ -3065,8 +3207,13 @@
       entry.root.style.height = `${rootHeight}px`;
       entry.root.classList.toggle("is-active", state.activeTypeTextBoxId === item.id);
       entry.root.classList.toggle("is-editing", !!item.isEditing);
-      entry.content.style.left = `${-visibleBounds.left}px`;
-      entry.content.style.top = `${-visibleBounds.top}px`;
+      entry.content.style.left = "0px";
+      entry.content.style.top = "0px";
+      renderTypeTextSvg(entry, item.text, actualFontSizeCss, lineHeightCss, visibleBounds);
+      entry.ink.style.left = "0px";
+      entry.ink.style.top = "0px";
+      entry.ink.style.width = `${visibleWidth}px`;
+      entry.ink.style.height = `${visibleHeight}px`;
     }
   }
 
@@ -3275,6 +3422,55 @@
     const offset = computeShapeProjectedOffsetWorld(targetCenterX, targetCenterY, refreshedMetrics);
     stage.pos[0] += offset.x;
     stage.pos[1] += offset.y;
+  }
+
+  function restoreStaticSceneState(nowMs = performance.now()) {
+    const now = Number.isFinite(nowMs) ? nowMs : performance.now();
+    isDraggingModel = false;
+    dragModelMode = "rotate";
+    rotVelX = 0;
+    rotVelY = 0;
+    rotVelZ = 0;
+    playMode6.pointerDown = false;
+    playMotion.vx = 0;
+    playMotion.vy = 0;
+    playMotion.vz = 0;
+    playMotion.targetX = 0;
+    playMotion.targetZ = 0;
+
+    stage.pos[0] = 0;
+    stage.pos[1] = 0;
+    stage.pos[2] = 0;
+    stage.rotX = 0;
+    stage.rotY = 0;
+    stage.rotZ = 0;
+
+    resetPlayMode4ToInitialState(now);
+    resetPlayMode5(now);
+    resetPlayMode6(now);
+    setMode5OlabVisible(false);
+    setMode6Visible(false);
+    updateMode6CanvasTransform();
+    updateMode6OlabTransform();
+    playMode5.showOlab = false;
+    playMode5.centerOffsetX = 0;
+    playMode5.centerOffsetY = 0;
+    playMode5.centerFilterReady = false;
+    playMode5.lastShowOlab = false;
+
+    state.perspectiveFovDeg = staticSceneView.perspectiveFovDeg;
+    gl.uniform1f(uFovY, getPerspectiveFovRad());
+    state.cameraZ = staticSceneView.cameraZ;
+    updateCameraUniforms();
+    syncPerspectiveInputs();
+    syncZoomInputs();
+
+    rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
+    applyTypeGridState();
+    applyTypographyLayout();
+    updateTypographyShapeVisibility();
+    updateTypographyOlabLockup();
+    updateRotationInputs();
   }
 
   function updateTypographyOlabLockup() {
@@ -3507,6 +3703,25 @@
     });
   }
 
+  async function createMode6ImageSegmentFromFile(file) {
+    if (!file || !String(file.type || "").startsWith("image/")) return null;
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      const image = await loadImageFromObjectUrl(objectUrl);
+      return {
+        type: "image",
+        name: String(file.name || "Image"),
+        src: objectUrl,
+        image,
+        width: Math.max(1, Number(image.naturalWidth) || Number(image.width) || 1),
+        height: Math.max(1, Number(image.naturalHeight) || Number(image.height) || 1),
+      };
+    } catch (error) {
+      URL.revokeObjectURL(objectUrl);
+      throw error;
+    }
+  }
+
   applyPlay1EnvironmentSource(playMode1.environmentUrl).catch(() => {
     clearPlay1EnvironmentResources();
   });
@@ -3665,6 +3880,8 @@
 
   const playMode5 = {
     spinMs: 1700,
+    shapeSpinMs: constants.defaultMode5ShapeSpinMs,
+    shapeHoldMs: constants.defaultMode5ShapeHoldMs,
     phase: "shape",
     phaseStartMs: 0,
     switchAngleProgress: 0.75,
@@ -3717,6 +3934,7 @@
     fillTextSize: true,
   };
   let mode6PositionDrag = null;
+  let pendingMode6ImageSegmentIndex = -1;
 
   function syncMode5CenterModeInput() {
     if (!mode5CenterModeSelect) return;
@@ -3886,7 +4104,10 @@
     playMode5.centerMode = normalizeMode5CenterMode(value);
     syncMode5CenterModeInput();
     playMode5.centerFilterReady = false;
-    if (state.playMode === "play7" && playMode5.centerMode !== "full") {
+    if (
+      (state.playMode === "play4" || state.playMode === "play7") &&
+      playMode5.centerMode !== "full"
+    ) {
       stage.pos[0] = 0;
       stage.pos[1] = 0;
     }
@@ -3896,6 +4117,41 @@
     playMode5.stackMode = Boolean(value);
     syncMode5StackToggleInput();
     playMode5.centerFilterReady = false;
+  }
+
+  function getMode5ShapeSpinMs(value = playMode5.shapeSpinMs) {
+    return clamp(
+      Number(value) || constants.defaultMode5ShapeSpinMs,
+      constants.minMode5ShapeSpinMs,
+      constants.maxMode5ShapeSpinMs,
+    );
+  }
+
+  function getMode5ShapeHoldMs(value = playMode5.shapeHoldMs) {
+    return clamp(
+      Number(value) || constants.defaultMode5ShapeHoldMs,
+      constants.minMode5ShapeHoldMs,
+      constants.maxMode5ShapeHoldMs,
+    );
+  }
+
+  function syncMode5ShapeTimingInputs() {
+    if (mode5ShapeSpinSecondsInput && document.activeElement !== mode5ShapeSpinSecondsInput) {
+      mode5ShapeSpinSecondsInput.value = (getMode5ShapeSpinMs() / 1000).toFixed(1);
+    }
+    if (mode5ShapeHoldSecondsInput && document.activeElement !== mode5ShapeHoldSecondsInput) {
+      mode5ShapeHoldSecondsInput.value = (getMode5ShapeHoldMs() / 1000).toFixed(1);
+    }
+  }
+
+  function setMode5ShapeSpinSeconds(value) {
+    playMode5.shapeSpinMs = getMode5ShapeSpinMs(Number(value) * 1000);
+    syncMode5ShapeTimingInputs();
+  }
+
+  function setMode5ShapeHoldSeconds(value) {
+    playMode5.shapeHoldMs = getMode5ShapeHoldMs(Number(value) * 1000);
+    syncMode5ShapeTimingInputs();
   }
 
   function setMode6FillTextSize(value) {
@@ -3919,11 +4175,83 @@
 
   function normalizeMode6Segments(value) {
     const rawSegments = Array.isArray(value) ? value : [value];
-    const segments = rawSegments.map((segment) => String(segment ?? "").replace(/\r\n?/g, "\n"));
-    if (!segments.length || segments.every((segment) => !segment.trim())) {
-      return constants.defaultMode6Texts.slice();
+    const segments = rawSegments
+      .map((segment) => normalizeMode6Segment(segment))
+      .filter(Boolean);
+    if (
+      !segments.length ||
+      segments.every((segment) =>
+        segment.type === "text"
+          ? !String(segment.text || "").trim()
+          : !segment.src,
+      )
+    ) {
+      return constants.defaultMode6Texts.map((text) => normalizeMode6Segment(text));
     }
     return segments;
+  }
+
+  function normalizeMode6Segment(segment) {
+    if (segment && typeof segment === "object" && segment.type === "image") {
+      const src = typeof segment.src === "string" ? segment.src : "";
+      return {
+        type: "image",
+        name: typeof segment.name === "string" ? segment.name : "Image",
+        src,
+        image: segment.image || null,
+        width: Math.max(1, Number(segment.width) || 1),
+        height: Math.max(1, Number(segment.height) || 1),
+      };
+    }
+    if (segment && typeof segment === "object" && segment.type === "text") {
+      return {
+        type: "text",
+        text: String(segment.text ?? "").replace(/\r\n?/g, "\n"),
+      };
+    }
+    return {
+      type: "text",
+      text: String(segment ?? "").replace(/\r\n?/g, "\n"),
+    };
+  }
+
+  function getMode6SegmentType(segment) {
+    return segment && segment.type === "image" ? "image" : "text";
+  }
+
+  function getMode6SegmentText(segment) {
+    return getMode6SegmentType(segment) === "text"
+      ? String(segment && segment.text != null ? segment.text : "").replace(/\r\n?/g, "\n")
+      : "";
+  }
+
+  function cloneMode6Segment(segment) {
+    const normalized = normalizeMode6Segment(segment);
+    if (normalized.type === "image") {
+      return {
+        type: "image",
+        name: normalized.name,
+        src: normalized.src,
+        image: normalized.image,
+        width: normalized.width,
+        height: normalized.height,
+      };
+    }
+    return {
+      type: "text",
+      text: normalized.text,
+    };
+  }
+
+  function releaseMode6SegmentAssets(segment) {
+    if (!segment || segment.type !== "image") return;
+    if (segment.src && String(segment.src).startsWith("blob:")) {
+      try {
+        URL.revokeObjectURL(segment.src);
+      } catch (_) {
+        // Ignore URL revoke failures for already released object URLs.
+      }
+    }
   }
 
   function normalizeMode6PositionCoords(value) {
@@ -3996,7 +4324,12 @@
   }
 
   function getMode6SegmentLabel(index) {
-    const raw = String(playMode6.texts[index] || "").trim();
+    const segment = playMode6.texts[index];
+    if (getMode6SegmentType(segment) === "image") {
+      const name = String(segment && segment.name ? segment.name : `Image ${index + 1}`).trim();
+      return name.length > 18 ? `${name.slice(0, 17)}...` : name;
+    }
+    const raw = getMode6SegmentText(segment).trim();
     const firstLine = raw.split(/\n/).find((line) => line.trim()) || `Segment ${index + 1}`;
     return firstLine.length > 18 ? `${firstLine.slice(0, 17)}...` : firstLine;
   }
@@ -4580,7 +4913,8 @@
     updateMode6PositionEditorMarkers();
   }
 
-  function createMode6SegmentEditor(index, text, totalCount) {
+  function createMode6SegmentEditor(index, segment, totalCount) {
+    const normalized = normalizeMode6Segment(segment);
     const item = document.createElement("div");
     item.className = "mode6-segment";
 
@@ -4600,15 +4934,66 @@
     removeButton.disabled = totalCount <= 1;
     header.appendChild(removeButton);
 
-    const textarea = document.createElement("textarea");
-    textarea.className = "mode6-segment-input";
-    textarea.rows = 4;
-    textarea.placeholder = constants.defaultMode6Text;
-    textarea.dataset.segmentIndex = String(index);
-    textarea.value = text;
-
     item.appendChild(header);
-    item.appendChild(textarea);
+
+    const meta = document.createElement("div");
+    meta.className = "mode6-segment-meta";
+
+    const typeSelect = document.createElement("select");
+    typeSelect.className = "mode6-segment-type";
+    typeSelect.dataset.segmentIndex = String(index);
+    typeSelect.innerHTML = `
+      <option value="text">Text</option>
+      <option value="image">Image</option>
+    `;
+    typeSelect.value = normalized.type;
+    meta.appendChild(typeSelect);
+    item.appendChild(meta);
+
+    if (normalized.type === "image") {
+      const imageWrap = document.createElement("div");
+      imageWrap.className = "mode6-segment-image";
+
+      if (normalized.src) {
+        const preview = document.createElement("img");
+        preview.className = "mode6-segment-image-preview";
+        preview.src = normalized.src;
+        preview.alt = normalized.name || `Segment ${index + 1}`;
+        imageWrap.appendChild(preview);
+      } else {
+        const empty = document.createElement("div");
+        empty.className = "mode6-segment-image-empty";
+        empty.textContent = "Upload image";
+        imageWrap.appendChild(empty);
+      }
+
+      const label = document.createElement("div");
+      label.className = "mode6-segment-image-label";
+      label.textContent = normalized.name || "No image selected";
+      imageWrap.appendChild(label);
+
+      const actions = document.createElement("div");
+      actions.className = "mode6-segment-image-actions";
+
+      const uploadButton = document.createElement("button");
+      uploadButton.type = "button";
+      uploadButton.className = "mode6-segment-remove";
+      uploadButton.dataset.segmentAction = "upload-image";
+      uploadButton.dataset.segmentIndex = String(index);
+      uploadButton.textContent = normalized.src ? "Replace image" : "Upload image";
+      actions.appendChild(uploadButton);
+
+      imageWrap.appendChild(actions);
+      item.appendChild(imageWrap);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.className = "mode6-segment-input";
+      textarea.rows = 4;
+      textarea.placeholder = constants.defaultMode6Text;
+      textarea.dataset.segmentIndex = String(index);
+      textarea.value = normalized.text;
+      item.appendChild(textarea);
+    }
     return item;
   }
 
@@ -4620,6 +5005,7 @@
   }
 
   function layoutMode6Text(text, context, maxWidth) {
+    const spacingPx = (constants.mode6TextLetterSpacingEm || 0) * getCanvasFontSizePx(context);
     const sourceLines = String(text ?? "").replace(/\r\n?/g, "\n").split("\n");
     const output = [];
     sourceLines.forEach((sourceLine) => {
@@ -4631,7 +5017,7 @@
       let line = "";
       chars.forEach((char) => {
         const nextLine = line + char;
-        if (line && context.measureText(nextLine).width > maxWidth) {
+        if (line && measureTextWidthWithSpacing(context, nextLine, spacingPx) > maxWidth) {
           output.push(line);
           line = char.trimStart();
         } else {
@@ -4641,6 +5027,52 @@
       output.push(line);
     });
     return output.length ? output : [""];
+  }
+
+  function getCanvasFontSizePx(context) {
+    const match = /(\d+(?:\.\d+)?)px/.exec(String(context && context.font ? context.font : ""));
+    return match ? Number(match[1]) || 0 : 0;
+  }
+
+  function setCanvasLetterSpacing(context, spacingPx) {
+    if (!context || !("letterSpacing" in context)) return false;
+    context.letterSpacing = `${spacingPx}px`;
+    return true;
+  }
+
+  function measureTextWidthWithSpacing(context, text, spacingPx) {
+    const safeText = String(text ?? "");
+    const chars = Array.from(safeText);
+    if (!chars.length) return 0;
+    if ("letterSpacing" in context) {
+      return context.measureText(safeText).width;
+    }
+    const kerningAwareWidth = context.measureText(safeText).width;
+    return kerningAwareWidth + Math.max(0, chars.length - 1) * spacingPx;
+  }
+
+  function fillTextWithSpacing(context, text, centerX, baselineY, spacingPx) {
+    const safeText = String(text ?? "");
+    if (!safeText.length) {
+      return;
+    }
+    if ("letterSpacing" in context) {
+      context.fillText(safeText, centerX, baselineY);
+      return;
+    }
+    const chars = Array.from(safeText);
+    const totalWidth = measureTextWidthWithSpacing(context, safeText, spacingPx);
+    const startX = centerX - totalWidth * 0.5;
+    const previousAlign = context.textAlign;
+    context.textAlign = "left";
+    chars.forEach((char, index) => {
+      const prefixWithCurrent = chars.slice(0, index + 1).join("");
+      const currentWidth = context.measureText(char).width;
+      const prefixAdvance = context.measureText(prefixWithCurrent).width - currentWidth;
+      const x = startX + prefixAdvance + index * spacingPx;
+      context.fillText(char, x, baselineY);
+    });
+    context.textAlign = previousAlign;
   }
 
   function getMode6CanvasInkBounds(sourceCanvas, renderScale) {
@@ -4677,7 +5109,7 @@
   }
 
   function buildMode6TextEntry(text) {
-    const baseFontPx = 256;
+    const baseFontPx = 320;
     const lineHeightPx = baseFontPx * 1.12;
     const paddingX = baseFontPx * 0.36;
     const paddingTop = baseFontPx * 0.28;
@@ -4685,10 +5117,14 @@
     const measureCanvas = document.createElement("canvas");
     const measureCtx = measureCanvas.getContext("2d");
     measureCtx.font = `500 ${baseFontPx}px "Aeonik Fono Exact", Arial, sans-serif`;
+    const letterSpacingPx = baseFontPx * constants.mode6TextLetterSpacingEm;
+    setCanvasLetterSpacing(measureCtx, letterSpacingPx);
     measureCtx.textAlign = "center";
     measureCtx.textBaseline = "alphabetic";
     const safeLines = layoutMode6Text(text, measureCtx, baseFontPx * 10.6);
-    const lineWidths = safeLines.map((line) => measureCtx.measureText(line || " ").width);
+    const lineWidths = safeLines.map((line) =>
+      measureTextWidthWithSpacing(measureCtx, line || " ", letterSpacingPx),
+    );
     const maxLineWidth = Math.max(1, ...lineWidths);
     const metrics = measureCtx.measureText("Mg");
     const ascent = metrics.actualBoundingBoxAscent || baseFontPx * 0.76;
@@ -4697,7 +5133,12 @@
     const logicalHeight = Math.ceil(
       paddingTop + ascent + descent + Math.max(0, safeLines.length - 1) * lineHeightPx + paddingBottom,
     );
-    const renderScale = 2;
+    const maxLogicalSide = Math.max(logicalWidth, logicalHeight, 1);
+    const renderScale = clamp(
+      Math.floor(mode6TextMaxTextureSize / maxLogicalSide),
+      2,
+      4,
+    );
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(2, Math.ceil(logicalWidth * renderScale));
     canvas.height = Math.max(2, Math.ceil(logicalHeight * renderScale));
@@ -4705,13 +5146,14 @@
     ctx.scale(renderScale, renderScale);
     ctx.clearRect(0, 0, logicalWidth, logicalHeight);
     ctx.font = `500 ${baseFontPx}px "Aeonik Fono Exact", Arial, sans-serif`;
+    setCanvasLetterSpacing(ctx, letterSpacingPx);
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
     ctx.fillStyle = getMode6TextCssColor();
     let baselineY = paddingTop + ascent;
     safeLines.forEach((line, index) => {
       if (index > 0) baselineY += lineHeightPx;
-      ctx.fillText(line || " ", logicalWidth * 0.5, baselineY);
+      fillTextWithSpacing(ctx, line || " ", logicalWidth * 0.5, baselineY, letterSpacingPx);
     });
     const inkBounds =
       getMode6CanvasInkBounds(canvas, renderScale) || {
@@ -4723,6 +5165,7 @@
         height: ascent + descent + Math.max(0, safeLines.length - 1) * lineHeightPx,
       };
     return {
+      type: "text",
       text: String(text ?? ""),
       canvas,
       logicalWidth,
@@ -4738,38 +5181,82 @@
     };
   }
 
+  function buildMode6ImageEntry(segment) {
+    const normalized = normalizeMode6Segment(segment);
+    const image = normalized.image;
+    const width = Math.max(1, normalized.width || (image ? image.naturalWidth || image.width : 1));
+    const height = Math.max(1, normalized.height || (image ? image.naturalHeight || image.height : 1));
+    const maxSide = 1000;
+    const scale = maxSide / Math.max(width, height);
+    const logicalWidth = Math.max(1, Math.round(width * scale));
+    const logicalHeight = Math.max(1, Math.round(height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = logicalWidth;
+    canvas.height = logicalHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+    if (image) {
+      ctx.drawImage(image, 0, 0, logicalWidth, logicalHeight);
+    }
+    return {
+      type: "image",
+      name: normalized.name,
+      canvas,
+      logicalWidth,
+      logicalHeight,
+      inkLeft: 0,
+      inkTop: 0,
+      inkRight: logicalWidth,
+      inkBottom: logicalHeight,
+      inkWidth: logicalWidth,
+      inkHeight: logicalHeight,
+      baseFontPx: maxSide,
+      texture: createMode6TextTextureFromCanvas(canvas),
+    };
+  }
+
+  function buildMode6SegmentEntry(segment) {
+    const normalized = normalizeMode6Segment(segment);
+    if (normalized.type === "image") {
+      return buildMode6ImageEntry(normalized);
+    }
+    return buildMode6TextEntry(normalized.text);
+  }
+
   function syncMode6TextEntries() {
     playMode6.entries.forEach((entry) => {
       if (entry && entry.texture) {
         deleteMode6TextTexture(entry.texture);
       }
     });
-    playMode6.entries = playMode6.texts.map((text) => buildMode6TextEntry(text));
+    playMode6.entries = playMode6.texts.map((segment) => buildMode6SegmentEntry(segment));
   }
 
   function renderMode6SegmentsEditor(focusIndex = -1) {
     if (!mode6SegmentsList) return;
     mode6SegmentsList.innerHTML = "";
-    playMode6.texts.forEach((text, index) => {
+    playMode6.texts.forEach((segment, index) => {
       mode6SegmentsList.appendChild(
-        createMode6SegmentEditor(index, text, playMode6.texts.length),
+        createMode6SegmentEditor(index, segment, playMode6.texts.length),
       );
     });
     if (Number.isInteger(focusIndex) && focusIndex >= 0) {
       playMode6.positionSelectedIndex = clamp(focusIndex, 0, Math.max(0, playMode6.texts.length - 1));
-      const textarea = mode6SegmentsList.querySelector(
-        `.mode6-segment-input[data-segment-index="${focusIndex}"]`,
+      const focusTarget = mode6SegmentsList.querySelector(
+        `.mode6-segment-input[data-segment-index="${focusIndex}"], .mode6-segment-type[data-segment-index="${focusIndex}"]`,
       );
-      if (textarea) {
-        textarea.focus();
-        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+      if (focusTarget instanceof HTMLTextAreaElement) {
+        focusTarget.focus();
+        focusTarget.setSelectionRange(focusTarget.value.length, focusTarget.value.length);
+      } else if (focusTarget instanceof HTMLElement) {
+        focusTarget.focus();
       }
     }
     updateMode6PositionEditor();
   }
 
   function setMode6Texts(value, options = {}) {
-    const nextTexts = normalizeMode6Segments(value);
+    const nextTexts = normalizeMode6Segments(value).map(cloneMode6Segment);
     playMode6.texts = nextTexts;
     syncMode6PositionOverrides(playMode6.texts.length, options.positionOverrides);
     playMode6.activeIndex =
@@ -4959,12 +5446,26 @@
 
   function setMode5LabAngle(primaryRad, secondaryRad) {
     playMode5.labAngleRad = primaryRad;
+    const primaryScale = Math.abs(Math.cos(primaryRad));
+    const hidePrimaryLab = primaryScale < 0.035;
     if (mode5OlabPrimary && mode5OlabPrimary.svg) {
       mode5OlabPrimary.svg.style.transform = `rotateY(${primaryRad}rad)`;
+      mode5OlabPrimary.svg.style.opacity = hidePrimaryLab ? "0" : "1";
+    }
+    if (mode5OlabPrimary && mode5OlabPrimary.labGroup) {
+      mode5OlabPrimary.labGroup.style.transform = "none";
+      mode5OlabPrimary.labGroup.style.opacity = "1";
     }
     if (mode5OlabSecondary && mode5OlabSecondary.svg) {
       const resolvedSecondary = Number.isFinite(secondaryRad) ? secondaryRad : primaryRad;
+      const secondaryScale = Math.abs(Math.cos(resolvedSecondary));
+      const hideSecondaryLab = secondaryScale < 0.035;
       mode5OlabSecondary.svg.style.transform = `rotateY(${resolvedSecondary}rad)`;
+      mode5OlabSecondary.svg.style.opacity = hideSecondaryLab ? "0" : "1";
+      if (mode5OlabSecondary.labGroup) {
+        mode5OlabSecondary.labGroup.style.transform = "none";
+        mode5OlabSecondary.labGroup.style.opacity = "1";
+      }
     }
   }
 
@@ -4974,6 +5475,9 @@
     playMode5.phaseStartMs = now;
     playMode5.baseAngleRad = 0;
     playMode5.currentAngleRad = 0;
+    playMode5.shapeOnly = false;
+    playMode5.shapeSpinMs = getMode5ShapeSpinMs();
+    playMode5.shapeHoldMs = getMode5ShapeHoldMs();
     playMode5.showOlab = false;
     playMode5.stackMode = false;
     playMode5.fixedXRad = 0;
@@ -5068,7 +5572,7 @@
 
   function resizeMode6TextCanvas() {
     if (!mode6TextCanvas) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, 4);
     const rect = frame.getBoundingClientRect();
     mode6TextCanvas.width = Math.max(2, Math.floor(rect.width * dpr));
     mode6TextCanvas.height = Math.max(2, Math.floor(rect.height * dpr));
@@ -5629,7 +6133,7 @@
     const rect = frame.getBoundingClientRect();
     const entries = playMode6.entries.length
       ? playMode6.entries
-      : constants.defaultMode6Texts.map((text) => buildMode6TextEntry(text));
+      : constants.defaultMode6Texts.map((text) => buildMode6SegmentEntry(text));
     if (!entries.length || rect.width < 2 || rect.height < 2) return;
     const basis = getMode6FocusBasis(entries.length, timeMs);
     const sphereRadius = getMode6SphereRadius(entries, rect);
@@ -5674,21 +6178,34 @@
   }
 
   function getMode5SphereScreenMetrics(rect) {
+    const viewState = arguments.length > 1 && arguments[1] ? arguments[1] : null;
     const pxScaleX = canvas.width / Math.max(1, rect.width);
     const pxScaleY = canvas.height / Math.max(1, rect.height);
-    const sphereCenterWorld = transformToWorld([0, 0, 0], sphereObject);
-    const sphereEdgeWorld = transformToWorld([0, constants.sphereRadiusWorld, 0], sphereObject);
-    const sphereCenterPx = projectWorldToScreen(
+    const stageView = viewState && viewState.stage ? viewState.stage : null;
+    const cameraZ = viewState && Number.isFinite(viewState.cameraZ) ? viewState.cameraZ : state.cameraZ;
+    const perspectiveFovDeg =
+      viewState && Number.isFinite(viewState.perspectiveFovDeg)
+        ? viewState.perspectiveFovDeg
+        : state.perspectiveFovDeg;
+    const sphereCenterWorld = transformToWorldWithStage([0, 0, 0], sphereObject, stageView);
+    const sphereEdgeWorld = transformToWorldWithStage(
+      [0, constants.sphereRadiusWorld, 0],
+      sphereObject,
+      stageView,
+    );
+    const sphereCenterPx = projectWorldToScreenWithView(
       sphereCenterWorld,
       canvas.width,
       canvas.height,
-      state.cameraZ,
+      cameraZ,
+      perspectiveFovDeg,
     );
-    const sphereEdgePx = projectWorldToScreen(
+    const sphereEdgePx = projectWorldToScreenWithView(
       sphereEdgeWorld,
       canvas.width,
       canvas.height,
-      state.cameraZ,
+      cameraZ,
+      perspectiveFovDeg,
     );
     if (!sphereCenterPx || !sphereEdgePx) {
       return null;
@@ -5707,6 +6224,21 @@
       sphereCenterPx,
       sphereEdgePx,
       sphereDiameterCss,
+    };
+  }
+
+  function getCanonicalLayoutViewState() {
+    return {
+      cameraZ: staticSceneView.cameraZ,
+      perspectiveFovDeg: staticSceneView.perspectiveFovDeg,
+      stage: {
+        rotX: 0,
+        rotY: 0,
+        rotZ: 0,
+        posX: 0,
+        posY: 0,
+        posZ: 0,
+      },
     };
   }
 
@@ -5815,6 +6347,7 @@
   function updateMode5OlabTransform() {
     if (!mode5OlabPrimary.wrap || !mode5OlabPrimary.svg) return;
     const isPlay7 = state.playMode === "play7";
+    const isShapeOnlyMode5 = state.playMode === "play4" && playMode5.shapeOnly;
     const isStackMode = isPlay7 && playMode5.stackMode;
     const showPrimary = isPlay7 && playMode5.showOlab;
     const showSecondary = isPlay7 && isStackMode && !playMode5.showOlab;
@@ -5847,7 +6380,7 @@
     const stackHalfOffsetWorld = isStackMode
       ? getMode5StackHalfOffsetWorld(rect, sphereDiameterCss)
       : 0;
-    const isFullCenterMode = isPlay7 && playMode5.centerMode === "full";
+    const isFullCenterMode = (isPlay7 || isShapeOnlyMode5) && playMode5.centerMode === "full";
 
     if (showPrimary) {
       updateMode5OlabInstanceTransform(mode5OlabPrimary, rect, {
@@ -6049,15 +6582,20 @@
   }
 
   function applyPlayMode5State(timeMs) {
-    const spinMs = Math.max(300, playMode5.spinMs);
+    const shapeOnly = !!playMode5.shapeOnly;
+    const spinMs = shapeOnly ? getMode5ShapeSpinMs() : Math.max(300, playMode5.spinMs);
+    const holdMs = shapeOnly ? getMode5ShapeHoldMs() : 0;
+    const cycleMs = spinMs + holdMs;
     let elapsed = Math.max(0, timeMs - playMode5.phaseStartMs);
-    while (elapsed >= spinMs) {
-      elapsed -= spinMs;
+    while (elapsed >= cycleMs) {
+      elapsed -= cycleMs;
       playMode5.phaseStartMs = timeMs - elapsed;
       playMode5.baseAngleRad -= Math.PI * 2;
-      playMode5.phase = playMode5.phase === "shape" ? "olab" : "shape";
+      playMode5.phase = shapeOnly
+        ? "shape"
+        : playMode5.phase === "shape" ? "olab" : "shape";
     }
-    const progress = clamp(elapsed / spinMs, 0, 1);
+    const progress = clamp(Math.min(elapsed, spinMs) / spinMs, 0, 1);
     const eased = easeInOutStrong01(progress);
     const angle = playMode5.baseAngleRad - Math.PI * 2 * eased;
     const starterIsOlab = playMode5.phase === "olab";
@@ -6065,7 +6603,7 @@
     const previousShowOlab = playMode5.lastShowOlab;
 
     playMode5.currentAngleRad = angle;
-    playMode5.showOlab = eased < switchAngleProgress ? starterIsOlab : !starterIsOlab;
+    playMode5.showOlab = shapeOnly ? false : eased < switchAngleProgress ? starterIsOlab : !starterIsOlab;
     const didSwitchVisual = playMode5.showOlab !== previousShowOlab;
     playMode5.lastShowOlab = playMode5.showOlab;
     stage.rotX = playMode5.fixedXRad;
@@ -6078,7 +6616,8 @@
     if (playMode5.centerMode === "full") {
       const centerOffset = computeMode5CenterOffsetWorld();
       const alpha = clamp(playMode5.centerFilterAlpha, 0.05, 0.95);
-      if (!playMode5.centerFilterReady || didSwitchVisual) {
+      const resetToExactCenter = !playMode5.centerFilterReady || (didSwitchVisual && !playMode5.showOlab);
+      if (resetToExactCenter) {
         playMode5.centerEma1X = centerOffset.x;
         playMode5.centerEma1Y = centerOffset.y;
         playMode5.centerEma2X = centerOffset.x;
@@ -6463,6 +7002,20 @@
     });
   }
 
+  if (mode5ShapeSpinSecondsInput) {
+    mode5ShapeSpinSecondsInput.addEventListener("input", () => {
+      setMode5ShapeSpinSeconds(mode5ShapeSpinSecondsInput.value);
+    });
+    mode5ShapeSpinSecondsInput.addEventListener("blur", syncMode5ShapeTimingInputs);
+  }
+
+  if (mode5ShapeHoldSecondsInput) {
+    mode5ShapeHoldSecondsInput.addEventListener("input", () => {
+      setMode5ShapeHoldSeconds(mode5ShapeHoldSecondsInput.value);
+    });
+    mode5ShapeHoldSecondsInput.addEventListener("blur", syncMode5ShapeTimingInputs);
+  }
+
   playModeSelect.addEventListener("change", () => {
     state.playMode = playModeSelect.value;
     syncModePanels();
@@ -6477,6 +7030,10 @@
     setMode5OlabVisible(false);
     setMode6Visible(false);
     playMode5.showOlab = false;
+    if (state.playMode === "off") {
+      restoreStaticSceneState(now);
+      return;
+    }
     if (state.playMode === "play6") {
       resetPlayMode4ToInitialState(now);
       setPerspectiveFov(constants.defaultPlay6PerspectiveFovDeg);
@@ -6492,11 +7049,25 @@
     }
     if (state.playMode === "play7") {
       resetPlayMode5(now);
+      playMode5.shapeOnly = false;
+      setPerspectiveFov(constants.defaultPlay7PerspectiveFovDeg);
       stage.rotX = playMode5.fixedXRad;
       stage.rotY = 0;
       stage.rotZ = playMode5.fixedZRad;
       setMode5CenterMode(mode5CenterModeSelect ? mode5CenterModeSelect.value : playMode5.centerMode);
       setMode5StackMode(mode5StackToggle ? mode5StackToggle.checked : false);
+      rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
+      return;
+    }
+    if (state.playMode === "play4") {
+      resetPlayMode5(now);
+      playMode5.shapeOnly = true;
+      setPerspectiveFov(constants.defaultPlay7PerspectiveFovDeg);
+      stage.rotX = playMode5.fixedXRad;
+      stage.rotY = 0;
+      stage.rotZ = playMode5.fixedZRad;
+      setMode5CenterMode(mode5CenterModeSelect ? mode5CenterModeSelect.value : playMode5.centerMode);
+      setMode5StackMode(false);
       rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
       return;
     }
@@ -6521,22 +7092,15 @@
       rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
       return;
     }
-    if (
-      state.playMode === "play1" ||
-      state.playMode === "play4"
-    ) {
+    if (state.playMode === "play1") {
       setupPlayYSpin(state.playMode);
       playMotion.vy = samplePlayYSpinSpeed(now);
     }
-    if (
-      state.playMode === "play1" ||
-      state.playMode === "play4"
-    ) {
+    if (state.playMode === "play1") {
       schedulePlayOrbitTargets(now);
     }
-    if (state.playMode === "play4") {
-      rebuildFrustumFor(constants.fixedPlay3LengthSvg, getFixedPlay3DiameterSvg());
-      return;
+    if (state.playMode === "play1") {
+      setPerspectiveFov(constants.defaultPlay1PerspectiveFovDeg);
     }
     rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
   });
@@ -6645,9 +7209,9 @@
     mode6SegmentsList.addEventListener("focusin", (event) => {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
-      const segmentInput = target.closest(".mode6-segment-input");
-      if (!segmentInput) return;
-      const index = Number(segmentInput.dataset.segmentIndex);
+      const segmentField = target.closest("[data-segment-index]");
+      if (!(segmentField instanceof HTMLElement)) return;
+      const index = Number(segmentField.dataset.segmentIndex);
       selectMode6PositionSegment(index);
     });
     mode6SegmentsList.addEventListener("input", (event) => {
@@ -6655,23 +7219,68 @@
       if (!(target instanceof HTMLTextAreaElement)) return;
       const index = Number(target.dataset.segmentIndex);
       if (!Number.isInteger(index) || index < 0 || index >= playMode6.texts.length) return;
-      playMode6.texts[index] = String(target.value ?? "").replace(/\r\n?/g, "\n");
+      const current = cloneMode6Segment(playMode6.texts[index]);
+      current.type = "text";
+      current.text = String(target.value ?? "").replace(/\r\n?/g, "\n");
+      playMode6.texts[index] = current;
       if (playMode6.entries[index] && playMode6.entries[index].texture) {
         deleteMode6TextTexture(playMode6.entries[index].texture);
       }
-      playMode6.entries[index] = buildMode6TextEntry(playMode6.texts[index]);
+      playMode6.entries[index] = buildMode6SegmentEntry(playMode6.texts[index]);
       updateMode6PositionEditorMarkers();
       renderMode6TextCanvas();
+    });
+    mode6SegmentsList.addEventListener("change", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLSelectElement)) return;
+      if (!target.classList.contains("mode6-segment-type")) return;
+      const index = Number(target.dataset.segmentIndex);
+      if (!Number.isInteger(index) || index < 0 || index >= playMode6.texts.length) return;
+      const nextType = target.value === "image" ? "image" : "text";
+      const current = cloneMode6Segment(playMode6.texts[index]);
+      if (nextType === current.type) return;
+      if (current.type === "image") {
+        releaseMode6SegmentAssets(current);
+      }
+      playMode6.texts[index] =
+        nextType === "image"
+          ? { type: "image", name: `Image ${index + 1}`, src: "", image: null, width: 1, height: 1 }
+          : { type: "text", text: "" };
+      if (playMode6.entries[index] && playMode6.entries[index].texture) {
+        deleteMode6TextTexture(playMode6.entries[index].texture);
+      }
+      playMode6.entries[index] = buildMode6SegmentEntry(playMode6.texts[index]);
+      renderMode6SegmentsEditor(index);
+      renderMode6TextCanvas();
+      if (nextType === "image") {
+        pendingMode6ImageSegmentIndex = index;
+        if (mode6SegmentImageInput) {
+          mode6SegmentImageInput.value = "";
+          mode6SegmentImageInput.click();
+        }
+      }
     });
     mode6SegmentsList.addEventListener("click", (event) => {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
+      const uploadButton = target.closest('[data-segment-action="upload-image"]');
+      if (uploadButton instanceof HTMLElement) {
+        const index = Number(uploadButton.dataset.segmentIndex);
+        if (!Number.isInteger(index) || index < 0 || index >= playMode6.texts.length) return;
+        pendingMode6ImageSegmentIndex = index;
+        if (mode6SegmentImageInput) {
+          mode6SegmentImageInput.value = "";
+          mode6SegmentImageInput.click();
+        }
+        return;
+      }
       const removeButton = target.closest(".mode6-segment-remove");
-      if (!removeButton) return;
+      if (!removeButton || removeButton.dataset.segmentAction === "upload-image") return;
       const index = Number(removeButton.dataset.segmentIndex);
       if (!Number.isInteger(index) || playMode6.texts.length <= 1) return;
       const nextTexts = playMode6.texts.slice();
       const nextPositions = playMode6.positionOverrides.slice();
+      releaseMode6SegmentAssets(nextTexts[index]);
       nextTexts.splice(index, 1);
       nextPositions.splice(index, 1);
       setMode6Texts(nextTexts, {
@@ -6800,10 +7409,50 @@
     mode6AddSegmentButton.addEventListener("click", () => {
       const nextTexts = playMode6.texts.slice();
       const nextPositions = playMode6.positionOverrides.slice();
-      nextTexts.push("");
+      nextTexts.push({ type: "text", text: "" });
       nextPositions.push(null);
       setMode6Texts(nextTexts, {
         focusIndex: nextTexts.length - 1,
+        positionOverrides: nextPositions,
+      });
+      updateMode6TextOrbit();
+    });
+  }
+
+  if (mode6AddImageSegmentButton) {
+    mode6AddImageSegmentButton.addEventListener("click", () => {
+      pendingMode6ImageSegmentIndex = playMode6.texts.length;
+      if (mode6SegmentImageInput) {
+        mode6SegmentImageInput.value = "";
+        mode6SegmentImageInput.click();
+      }
+    });
+  }
+
+  if (mode6SegmentImageInput) {
+    mode6SegmentImageInput.addEventListener("change", async () => {
+      const file = mode6SegmentImageInput.files && mode6SegmentImageInput.files[0];
+      const targetIndex = pendingMode6ImageSegmentIndex;
+      pendingMode6ImageSegmentIndex = -1;
+      mode6SegmentImageInput.value = "";
+      if (!file) return;
+      const segment = await createMode6ImageSegmentFromFile(file).catch(() => null);
+      if (!segment) return;
+      const nextTexts = playMode6.texts.slice();
+      const nextPositions = playMode6.positionOverrides.slice();
+      if (targetIndex >= 0 && targetIndex < nextTexts.length) {
+        releaseMode6SegmentAssets(nextTexts[targetIndex]);
+        nextTexts[targetIndex] = segment;
+      } else {
+        nextTexts.push(segment);
+        nextPositions.push(null);
+      }
+      setMode6Texts(nextTexts, {
+        focusIndex: clamp(
+          targetIndex >= 0 ? targetIndex : nextTexts.length - 1,
+          0,
+          Math.max(0, nextTexts.length - 1),
+        ),
         positionOverrides: nextPositions,
       });
       updateMode6TextOrbit();
@@ -7076,6 +7725,8 @@
       constants.defaultFrustumLargeDiameterSvg / constants.defaultFrustumLengthSvg;
     state.cameraZ = constants.defaultCameraZ;
     state.perspectiveFovDeg = constants.defaultPerspectiveFovDeg;
+    staticSceneView.cameraZ = state.cameraZ;
+    staticSceneView.perspectiveFovDeg = state.perspectiveFovDeg;
     state.framePreset = "custom";
     state.frameBgColor = constants.defaultFrameBgColor;
     state.typeGridVisible = constants.defaultTypeGridVisible;
@@ -7112,6 +7763,8 @@
     playMode4.easeAmount = constants.defaultMode4Ease;
     playMode4.imageMode = constants.defaultMode4ImageMode;
     resetPlayMode5(performance.now());
+    playMode5.shapeSpinMs = constants.defaultMode5ShapeSpinMs;
+    playMode5.shapeHoldMs = constants.defaultMode5ShapeHoldMs;
     playMode6.distributionMode = constants.defaultMode6TextDistribution;
     playMode6.distributionPhase = 0.4;
     resetPlayMode6(performance.now());
@@ -7130,6 +7783,7 @@
     syncPerspectiveInputs();
     syncMode4ExpandedLengthInput();
     syncMode4MotionInputs();
+    syncMode5ShapeTimingInputs();
     syncModePanels();
     syncPlay1EnvironmentToggle();
     mode4ImageModeSelect.value = playMode4.imageMode;
@@ -7280,6 +7934,56 @@
     return result;
   }
 
+  function escapeSvgAttr(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function buildTypeGridSvgMarkup(width, height) {
+    if (!state.typeGridVisible) return "";
+    const spacing = getEffectiveTypeGridSpacing({ width, height });
+    const margin = Math.max(0, spacing.marginCss || 0);
+    const gutter = Math.max(0, spacing.gutterCss || 0);
+    const columns = Math.max(constants.minTypeGridColumns, state.typeGridColumns);
+    const rows = Math.max(constants.minTypeGridBaseline, state.typeGridBaseline);
+    const innerWidth = Math.max(1, width - margin * 2);
+    const innerHeight = Math.max(1, height - margin * 2);
+    const columnWidth = Math.max(1, (innerWidth - gutter * Math.max(0, columns - 1)) / columns);
+    const rowHeight = Math.max(1, (innerHeight - gutter * Math.max(0, rows - 1)) / rows);
+    const gridLine = escapeSvgAttr(getCssVariableColor("--grid-line", "rgba(16, 17, 20, 0.1)"));
+    const gridFill = escapeSvgAttr(getCssVariableColor("--grid-fill", "rgba(16, 17, 20, 0.035)"));
+    const parts = [
+      `<g id="type-grid" fill="${gridFill}" stroke="${gridLine}" stroke-width="1">`,
+    ];
+
+    for (let index = 0; index < columns; index += 1) {
+      const x = margin + index * (columnWidth + gutter);
+      parts.push(
+        `<rect x="${x}" y="${margin}" width="${columnWidth}" height="${innerHeight}" stroke="none"/>`,
+        `<line x1="${x}" y1="${margin}" x2="${x}" y2="${margin + innerHeight}"/>`,
+        `<line x1="${x + columnWidth}" y1="${margin}" x2="${x + columnWidth}" y2="${margin + innerHeight}"/>`,
+      );
+    }
+
+    for (let index = 0; index < rows; index += 1) {
+      const y = margin + index * (rowHeight + gutter);
+      parts.push(
+        `<rect x="${margin}" y="${y}" width="${innerWidth}" height="${rowHeight}" stroke="none"/>`,
+        `<line x1="${margin}" y1="${y}" x2="${margin + innerWidth}" y2="${y}"/>`,
+        `<line x1="${margin}" y1="${y + rowHeight}" x2="${margin + innerWidth}" y2="${y + rowHeight}"/>`,
+      );
+    }
+
+    parts.push(
+      `<rect x="${margin}" y="${margin}" width="${innerWidth}" height="${innerHeight}" fill="none"/>`,
+      `</g>`,
+    );
+    return parts.join("");
+  }
+
   function buildProjectedSvgText() {
     const rect = frame.getBoundingClientRect();
     const width = Math.max(1, Math.round(rect.width));
@@ -7322,10 +8026,12 @@
     for (const shape of shapes) {
       paths += `<path d="${shape.path}" fill="${shape.fill}"/>`;
     }
+    const gridMarkup = buildTypeGridSvgMarkup(width, height);
 
     return (
       `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" ` +
       `viewBox="0 0 ${width} ${height}">` +
+      gridMarkup +
       paths +
       `</svg>`
     );
@@ -7360,11 +8066,189 @@
   }
 
   function getFrameExportSize() {
-    const rect = frame.getBoundingClientRect();
     return {
-      width: Math.max(2, Math.round(rect.width || state.frameWidth)),
-      height: Math.max(2, Math.round(rect.height || state.frameHeight)),
+      width: Math.max(2, Math.round(state.frameWidth || constants.defaultFrameWidth)),
+      height: Math.max(2, Math.round(state.frameHeight || constants.defaultFrameHeight)),
     };
+  }
+
+  function capturePlayMode6VideoState() {
+    return {
+      cycleStartMs: playMode6.cycleStartMs,
+      focusStartMs: playMode6.focusStartMs,
+      activeIndex: playMode6.activeIndex,
+      previousIndex: playMode6.previousIndex,
+      shapeAngleRad: playMode6.shapeAngleRad,
+    };
+  }
+
+  function restorePlayMode6VideoState(snapshot) {
+    if (!snapshot) return;
+    playMode6.cycleStartMs = snapshot.cycleStartMs;
+    playMode6.focusStartMs = snapshot.focusStartMs;
+    playMode6.activeIndex = snapshot.activeIndex;
+    playMode6.previousIndex = snapshot.previousIndex;
+    playMode6.shapeAngleRad = snapshot.shapeAngleRad;
+  }
+
+  function applyPlayMode6ExportLoopState(timeMs, elapsedMs) {
+    const total = Math.max(1, playMode6.texts.length);
+    const holdMs = Math.max(1, getMode6HoldMs());
+    const transitionMs = Math.max(1, getMode6TransitionMs());
+    const cycleMs = holdMs + transitionMs;
+    const safeElapsed = Math.max(0, elapsedMs);
+    const normalizedElapsed = safeElapsed % (cycleMs * total || 1);
+    const segmentIndex = Math.floor(normalizedElapsed / cycleMs) % total;
+    const phaseMs = normalizedElapsed - Math.floor(normalizedElapsed / cycleMs) * cycleMs;
+    const nextIndex = (segmentIndex + 1) % total;
+
+    playMode6.cycleStartMs = timeMs - normalizedElapsed;
+
+    if (phaseMs < holdMs) {
+      playMode6.previousIndex = segmentIndex;
+      playMode6.activeIndex = segmentIndex;
+      playMode6.focusStartMs = timeMs - (transitionMs + phaseMs);
+    } else {
+      playMode6.previousIndex = segmentIndex;
+      playMode6.activeIndex = nextIndex;
+      playMode6.focusStartMs = timeMs - (phaseMs - holdMs);
+    }
+
+    const focusTiming = getMode6FocusTiming(timeMs);
+    const transitionSpin = focusTiming.eased * Math.PI * 0.18;
+    playMode6.shapeAngleRad = -timeMs * 0.00018 - transitionSpin;
+  }
+
+  function invertEaseInOutStrong01(value) {
+    const y = clamp(value, 0, 1);
+    if (y <= 0.5) {
+      return Math.pow(y / 16, 1 / 5);
+    }
+    return 1 - Math.pow((1 - y) / 16, 1 / 5);
+  }
+
+  function capturePlayMode5VideoState() {
+    return {
+      phase: playMode5.phase,
+      phaseStartMs: playMode5.phaseStartMs,
+      baseAngleRad: playMode5.baseAngleRad,
+      currentAngleRad: playMode5.currentAngleRad,
+      showOlab: playMode5.showOlab,
+      shapeOnly: playMode5.shapeOnly,
+      centerOffsetX: playMode5.centerOffsetX,
+      centerOffsetY: playMode5.centerOffsetY,
+      centerFilterReady: playMode5.centerFilterReady,
+      centerEma1X: playMode5.centerEma1X,
+      centerEma1Y: playMode5.centerEma1Y,
+      centerEma2X: playMode5.centerEma2X,
+      centerEma2Y: playMode5.centerEma2Y,
+      lastShowOlab: playMode5.lastShowOlab,
+      labAngleRad: playMode5.labAngleRad,
+      stageRotX: stage.rotX,
+      stageRotY: stage.rotY,
+      stageRotZ: stage.rotZ,
+      stagePosX: stage.pos[0],
+      stagePosY: stage.pos[1],
+    };
+  }
+
+  function restorePlayMode5VideoState(snapshot) {
+    if (!snapshot) return;
+    playMode5.phase = snapshot.phase;
+    playMode5.phaseStartMs = snapshot.phaseStartMs;
+    playMode5.baseAngleRad = snapshot.baseAngleRad;
+    playMode5.currentAngleRad = snapshot.currentAngleRad;
+    playMode5.showOlab = snapshot.showOlab;
+    playMode5.shapeOnly = !!snapshot.shapeOnly;
+    playMode5.centerOffsetX = snapshot.centerOffsetX;
+    playMode5.centerOffsetY = snapshot.centerOffsetY;
+    playMode5.centerFilterReady = snapshot.centerFilterReady;
+    playMode5.centerEma1X = snapshot.centerEma1X;
+    playMode5.centerEma1Y = snapshot.centerEma1Y;
+    playMode5.centerEma2X = snapshot.centerEma2X;
+    playMode5.centerEma2Y = snapshot.centerEma2Y;
+    playMode5.lastShowOlab = snapshot.lastShowOlab;
+    playMode5.labAngleRad = snapshot.labAngleRad;
+    stage.rotX = snapshot.stageRotX;
+    stage.rotY = snapshot.stageRotY;
+    stage.rotZ = snapshot.stageRotZ;
+    stage.pos[0] = snapshot.stagePosX;
+    stage.pos[1] = snapshot.stagePosY;
+    setMode5LabAngle(snapshot.labAngleRad, playMode5.stackMode ? -snapshot.labAngleRad : snapshot.labAngleRad);
+  }
+
+  function getPlayMode5LoopExportDurationMs() {
+    const spinMs = Math.max(300, playMode5.spinMs);
+    return spinMs * (playMode5.shapeOnly ? 1 : 2);
+  }
+
+  function applyPlayMode5ExportLoopState(timeMs, elapsedMs) {
+    const shapeOnly = !!playMode5.shapeOnly;
+    const spinMs = Math.max(300, playMode5.spinMs);
+    const totalDurationMs = spinMs * (shapeOnly ? 1 : 2);
+    const clampedElapsed = clamp(elapsedMs, 0, Math.max(0, totalDurationMs - 0.0001));
+    const phaseIndex = shapeOnly ? 0 : Math.min(1, Math.floor(clampedElapsed / spinMs));
+    const inSecondPhase = phaseIndex === 1;
+    const phaseElapsed = clampedElapsed - phaseIndex * spinMs;
+    const progress = clamp(phaseElapsed / spinMs, 0, 1);
+    const eased = easeInOutStrong01(progress);
+    const switchProgress = clamp(playMode5.switchAngleProgress, 0.05, 0.95);
+    const starterIsOlab = !shapeOnly && inSecondPhase;
+    const baseAngleRad = -Math.PI * 2 * phaseIndex;
+    const previousShowOlab = playMode5.lastShowOlab;
+
+    playMode5.phase = starterIsOlab ? "olab" : "shape";
+    playMode5.phaseStartMs = timeMs - phaseElapsed;
+    playMode5.baseAngleRad = baseAngleRad;
+    playMode5.currentAngleRad = baseAngleRad - Math.PI * 2 * eased;
+    playMode5.showOlab = shapeOnly ? false : eased < switchProgress ? starterIsOlab : !starterIsOlab;
+
+    const didSwitchVisual = playMode5.showOlab !== previousShowOlab;
+    playMode5.lastShowOlab = playMode5.showOlab;
+    stage.rotX = playMode5.fixedXRad;
+    stage.rotY = playMode5.currentAngleRad;
+    stage.rotZ = playMode5.fixedZRad;
+    stage.pos[0] = 0;
+    stage.pos[1] = 0;
+    let posX = 0;
+    let posY = 0;
+
+    if (playMode5.centerMode === "full") {
+      const centerOffset = computeMode5CenterOffsetWorld();
+      const alpha = clamp(playMode5.centerFilterAlpha, 0.05, 0.95);
+      const resetToExactCenter = !playMode5.centerFilterReady || (didSwitchVisual && !playMode5.showOlab);
+      if (resetToExactCenter) {
+        playMode5.centerEma1X = centerOffset.x;
+        playMode5.centerEma1Y = centerOffset.y;
+        playMode5.centerEma2X = centerOffset.x;
+        playMode5.centerEma2Y = centerOffset.y;
+        playMode5.centerFilterReady = true;
+        posX = Math.abs(centerOffset.x) < playMode5.centerDeadbandWorld ? 0 : centerOffset.x;
+        posY = Math.abs(centerOffset.y) < playMode5.centerDeadbandWorld ? 0 : centerOffset.y;
+      } else {
+        playMode5.centerEma1X += (centerOffset.x - playMode5.centerEma1X) * alpha;
+        playMode5.centerEma1Y += (centerOffset.y - playMode5.centerEma1Y) * alpha;
+        playMode5.centerEma2X += (playMode5.centerEma1X - playMode5.centerEma2X) * alpha;
+        playMode5.centerEma2Y += (playMode5.centerEma1Y - playMode5.centerEma2Y) * alpha;
+        const maxLead = Math.max(0.0001, playMode5.centerFilterMaxLeadWorld);
+        const filteredX = 2 * playMode5.centerEma1X - playMode5.centerEma2X;
+        const filteredY = 2 * playMode5.centerEma1Y - playMode5.centerEma2Y;
+        const correctedX = clamp(filteredX, centerOffset.x - maxLead, centerOffset.x + maxLead);
+        const correctedY = clamp(filteredY, centerOffset.y - maxLead, centerOffset.y + maxLead);
+        posX = Math.abs(correctedX) < playMode5.centerDeadbandWorld ? 0 : correctedX;
+        posY = Math.abs(correctedY) < playMode5.centerDeadbandWorld ? 0 : correctedY;
+      }
+      playMode5.centerOffsetX = posX;
+      playMode5.centerOffsetY = posY;
+    } else {
+      playMode5.centerOffsetX = 0;
+      playMode5.centerOffsetY = 0;
+      playMode5.centerFilterReady = false;
+    }
+
+    stage.pos[0] = posX;
+    stage.pos[1] = posY;
+    setMode5LabAngle(playMode5.currentAngleRad, playMode5.stackMode ? -playMode5.currentAngleRad : playMode5.currentAngleRad);
   }
 
   function getCssVariableColor(name, fallback) {
@@ -7470,9 +8354,59 @@
     return match ? Number(match[1]) || 0 : 0;
   }
 
+  function mapDomRectToExportRect(domRect, frameRect, exportWidth, exportHeight) {
+    if (
+      !domRect ||
+      !frameRect ||
+      !Number.isFinite(domRect.left) ||
+      !Number.isFinite(domRect.top) ||
+      !(domRect.width > 0) ||
+      !(domRect.height > 0) ||
+      !(frameRect.width > 0) ||
+      !(frameRect.height > 0)
+    ) {
+      return null;
+    }
+    const scaleX = exportWidth / frameRect.width;
+    const scaleY = exportHeight / frameRect.height;
+    return {
+      left: (domRect.left - frameRect.left) * scaleX,
+      top: (domRect.top - frameRect.top) * scaleY,
+      width: domRect.width * scaleX,
+      height: domRect.height * scaleY,
+    };
+  }
+
+  function drawSvgGraphicIntoRect(ctx, graphicElement, viewRect) {
+    if (
+      !graphicElement ||
+      !viewRect ||
+      !(viewRect.width > 0) ||
+      !(viewRect.height > 0) ||
+      typeof graphicElement.getBBox !== "function"
+    ) {
+      return;
+    }
+    let sourceBox = null;
+    try {
+      sourceBox = graphicElement.getBBox();
+    } catch (_error) {
+      sourceBox = null;
+    }
+    if (!sourceBox || !(sourceBox.width > 0) || !(sourceBox.height > 0)) return;
+    ctx.save();
+    ctx.translate(viewRect.left, viewRect.top);
+    ctx.scale(viewRect.width / sourceBox.width, viewRect.height / sourceBox.height);
+    ctx.translate(-sourceBox.x, -sourceBox.y);
+    drawSvgPathsForExport(ctx, graphicElement);
+    ctx.restore();
+  }
+
   function drawSvgPathsForExport(ctx, svgElement) {
     if (!svgElement || typeof Path2D === "undefined") return;
-    const paths = Array.from(svgElement.querySelectorAll("path"));
+    const tagName = svgElement.tagName ? svgElement.tagName.toLowerCase() : "";
+    const paths =
+      tagName === "path" ? [svgElement] : Array.from(svgElement.querySelectorAll("path"));
     paths.forEach((pathElement) => {
       if (pathElement.style && pathElement.style.display === "none") return;
       const pathData = pathElement.getAttribute("d");
@@ -7483,31 +8417,168 @@
     });
   }
 
-  function drawMode5OlabInstanceForExport(ctx, instance) {
-    if (!instance || !instance.wrap || instance.wrap.style.display === "none") return;
-    const bounds = getMode5OlabExportBounds(instance);
-    if (!bounds) return;
-    const scaleX = bounds.width / constants.mode5OlabViewWidthSvg;
-    const scaleY = bounds.height / constants.mode5OlabViewHeightSvg;
-    const textColor = getComputedStyle(instance.wrap).color || getCssVariableColor("--text", "#101114");
+  function getMode5LabTextureCanvas(instance, textColor, targetWidth, targetHeight) {
+    if (!instance || !instance.svg) return null;
+    const safeWidth = clamp(Math.ceil(Math.max(64, targetWidth) * 2), 128, 4096);
+    const safeHeight = clamp(Math.ceil(Math.max(32, targetHeight) * 2), 64, 2048);
+    const cached = mode5ExportTextureCache.get(instance.svg);
+    if (
+      cached &&
+      cached.color === textColor &&
+      cached.width === safeWidth &&
+      cached.height === safeHeight
+    ) {
+      return cached.canvas;
+    }
+    const sourceCanvas = document.createElement("canvas");
+    sourceCanvas.width = safeWidth;
+    sourceCanvas.height = safeHeight;
+    const sourceCtx = sourceCanvas.getContext("2d");
+    if (!sourceCtx) return null;
+    sourceCtx.clearRect(0, 0, safeWidth, safeHeight);
+    sourceCtx.save();
+    sourceCtx.scale(
+      safeWidth / constants.mode5OlabViewWidthSvg,
+      safeHeight / constants.mode5OlabViewHeightSvg,
+    );
+    sourceCtx.fillStyle = textColor;
+    drawSvgPathsForExport(sourceCtx, instance.svg);
+    sourceCtx.restore();
+    mode5ExportTextureCache.set(instance.svg, {
+      color: textColor,
+      width: safeWidth,
+      height: safeHeight,
+      canvas: sourceCanvas,
+    });
+    return sourceCanvas;
+  }
 
-    ctx.save();
-    ctx.translate(bounds.left, bounds.top);
-    ctx.scale(scaleX, scaleY);
-    ctx.fillStyle = textColor;
+  function projectMode5LabPlanePoint(bounds, localX, localY, angleRad, perspectivePx, frameWidth, frameHeight) {
+    const originLocalX =
+      (constants.mode5OlabOCenterXSvg / constants.mode5OlabViewWidthSvg) * bounds.width;
+    const originLocalY =
+      (constants.mode5OlabOCenterYSvg / constants.mode5OlabViewHeightSvg) * bounds.height;
+    const relX = localX - originLocalX;
+    const relY = localY - originLocalY;
+    const rotatedX = relX * Math.cos(angleRad);
+    const rotatedZ = -relX * Math.sin(angleRad);
+    const baseX = bounds.left + originLocalX + rotatedX;
+    const baseY = bounds.top + originLocalY + relY;
+    const perspectiveOriginX = frameWidth * 0.5;
+    const perspectiveOriginY = frameHeight * 0.5;
+    const scale = perspectivePx / Math.max(0.001, perspectivePx - rotatedZ);
+    return {
+      x: perspectiveOriginX + (baseX - perspectiveOriginX) * scale,
+      y: perspectiveOriginY + (baseY - perspectiveOriginY) * scale,
+    };
+  }
 
-    if (instance.svg) {
-      const angle = getRotateYAngleFromTransform(instance.svg.style.transform);
-      const rotateScale = Math.cos(angle);
+  function drawMode5LabTextureForExport(ctx, instance, bounds, exportWidth, exportHeight, textColor) {
+    if (!instance || !instance.svg || instance.svg.style.opacity === "0") return;
+    const angle = getRotateYAngleFromTransform(instance.svg.style.transform);
+    const texture = getMode5LabTextureCanvas(instance, textColor, bounds.width, bounds.height);
+    if (!texture) return;
+    const perspectivePx = parseFloat(frame.style.perspective) || 980;
+    const planeWidth = bounds.width;
+    const planeHeight = bounds.height;
+    const stripCount = clamp(Math.ceil(planeWidth * 0.35), 32, 180);
+    const stripWidth = texture.width / stripCount;
+
+    for (let index = 0; index < stripCount; index += 1) {
+      const u0 = index / stripCount;
+      const u1 = (index + 1) / stripCount;
+      const x0 = planeWidth * u0;
+      const x1 = planeWidth * u1;
+      const p00 = projectMode5LabPlanePoint(
+        bounds,
+        x0,
+        0,
+        angle,
+        perspectivePx,
+        exportWidth,
+        exportHeight,
+      );
+      const p10 = projectMode5LabPlanePoint(
+        bounds,
+        x1,
+        0,
+        angle,
+        perspectivePx,
+        exportWidth,
+        exportHeight,
+      );
+      const p11 = projectMode5LabPlanePoint(
+        bounds,
+        x1,
+        planeHeight,
+        angle,
+        perspectivePx,
+        exportWidth,
+        exportHeight,
+      );
+      const p01 = projectMode5LabPlanePoint(
+        bounds,
+        x0,
+        planeHeight,
+        angle,
+        perspectivePx,
+        exportWidth,
+        exportHeight,
+      );
+      const sx = texture.width * u0;
+      const sw = Math.max(1, texture.width * (u1 - u0));
       ctx.save();
-      ctx.translate(constants.mode5OlabOCenterXSvg, constants.mode5OlabOCenterYSvg);
-      ctx.scale(rotateScale, 1);
-      ctx.translate(-constants.mode5OlabOCenterXSvg, -constants.mode5OlabOCenterYSvg);
-      drawSvgPathsForExport(ctx, instance.svg);
+      ctx.beginPath();
+      ctx.moveTo(p00.x, p00.y);
+      ctx.lineTo(p10.x, p10.y);
+      ctx.lineTo(p11.x, p11.y);
+      ctx.lineTo(p01.x, p01.y);
+      ctx.closePath();
+      ctx.clip();
+      ctx.transform(
+        (p10.x - p00.x) / sw,
+        (p10.y - p00.y) / sw,
+        (p01.x - p00.x) / texture.height,
+        (p01.y - p00.y) / texture.height,
+        p00.x,
+        p00.y,
+      );
+      ctx.drawImage(texture, sx, 0, sw, texture.height, 0, 0, sw, texture.height);
       ctx.restore();
     }
+  }
 
-    drawSvgPathsForExport(ctx, instance.oSvg);
+  function drawMode5OlabInstanceForExport(ctx, instance) {
+    if (!instance || !instance.wrap || instance.wrap.style.display === "none") return;
+    const frameRect = frame.getBoundingClientRect();
+    const exportSize = getFrameExportSize();
+    const textColor = getComputedStyle(instance.wrap).color || getCssVariableColor("--text", "#101114");
+    const labRect = instance.labGroup ? instance.labGroup.getBoundingClientRect() : null;
+    const oRect = instance.oPath ? instance.oPath.getBoundingClientRect() : null;
+    const mappedLabRect =
+      instance.svg && instance.svg.style.opacity !== "0"
+        ? mapDomRectToExportRect(labRect, frameRect, exportSize.width, exportSize.height)
+        : null;
+    const mappedORect = mapDomRectToExportRect(oRect, frameRect, exportSize.width, exportSize.height);
+    if (!mappedLabRect && !mappedORect) return;
+
+    ctx.save();
+    ctx.fillStyle = textColor;
+
+    if (mappedLabRect && instance.svg) {
+      drawMode5LabTextureForExport(
+        ctx,
+        instance,
+        mappedLabRect,
+        exportSize.width,
+        exportSize.height,
+        textColor,
+      );
+    }
+
+    if (mappedORect && instance.oPath) {
+      drawSvgGraphicIntoRect(ctx, instance.oPath, mappedORect);
+    }
     ctx.restore();
   }
 
@@ -7537,10 +8608,17 @@
       return "";
     }
     return [
+      "video/mp4;codecs=avc1.42E01E",
+      "video/mp4;codecs=h264",
+      "video/mp4",
       "video/webm;codecs=vp9",
       "video/webm;codecs=vp8",
       "video/webm",
     ].find((type) => MediaRecorder.isTypeSupported(type)) || "";
+  }
+
+  function getVideoExportExtension(mimeType) {
+    return String(mimeType || "").includes("mp4") ? "mp4" : "webm";
   }
 
   async function exportPlayModeVideo() {
@@ -7557,16 +8635,35 @@
       return;
     }
 
-    const fps = 30;
-    const durationMs = 4000;
+    const fps = 60;
+    const isMode6LoopExport = state.playMode === "play5";
+    const isMode5LoopExport = state.playMode === "play4" || state.playMode === "play7";
+    const durationMs = isMode6LoopExport
+      ? Math.max(1, getMode6CycleMs() * Math.max(1, playMode6.texts.length))
+      : isMode5LoopExport
+        ? Math.max(1, getPlayMode5LoopExportDurationMs())
+        : 4000;
+    const frameDurationMs = 1000 / fps;
+    const totalFrames = isMode5LoopExport
+      ? Math.max(2, Math.floor(durationMs / frameDurationMs))
+      : Math.max(
+          2,
+          Math.round(durationMs / frameDurationMs) + (isMode6LoopExport ? 1 : 0),
+        );
     const mimeType = getSupportedVideoMimeType();
     const stream = exportCanvas.captureStream(fps);
     const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
     const chunks = [];
     let frameId = 0;
     videoExport.active = true;
+    videoExport.mode6LoopElapsedMs = null;
+    videoExport.mode6SavedState = isMode6LoopExport ? capturePlayMode6VideoState() : null;
+    videoExport.mode5LoopElapsedMs = null;
+    videoExport.mode5SavedState = isMode5LoopExport ? capturePlayMode5VideoState() : null;
     syncOutputControls();
-    copyStatus.textContent = "Recording play mode video...";
+    copyStatus.textContent = mimeType.includes("mp4")
+      ? "Recording play mode video..."
+      : "Recording play mode video... MP4 is not supported here, falling back to WebM.";
 
     const finished = new Promise((resolve, reject) => {
       recorder.addEventListener("dataavailable", (event) => {
@@ -7581,20 +8678,40 @@
     });
 
     const startedAt = performance.now();
+    let frameIndex = 0;
+    const syncMode5ExportVisuals = (elapsedMs) => {
+      const virtualNow = startedAt + elapsedMs;
+      videoExport.mode5LoopElapsedMs = elapsedMs;
+      applyPlayMode5ExportLoopState(virtualNow, elapsedMs);
+      updateMode5OlabTransform();
+    };
     const draw = () => {
       if (!videoExport.active) return;
-      if (state.playMode === "play5") {
-        renderMode6TextCanvas(performance.now());
+      const elapsedMs = Math.min(frameIndex * frameDurationMs, durationMs);
+      if (isMode6LoopExport) {
+        videoExport.mode6LoopElapsedMs = elapsedMs;
+        const virtualNow = startedAt + elapsedMs;
+        applyPlayMode6ExportLoopState(virtualNow, elapsedMs);
+        renderMode6TextCanvas(virtualNow);
+      } else if (isMode5LoopExport) {
+        syncMode5ExportVisuals(elapsedMs);
       }
       drawCurrentFrameToExportCanvas(exportCanvas, exportCtx);
-      if (performance.now() - startedAt >= durationMs) {
+      if (frameIndex >= totalFrames - 1) {
         if (recorder.state === "recording") recorder.stop();
         return;
       }
+      frameIndex += 1;
       frameId = requestAnimationFrame(draw);
     };
 
     try {
+      if (isMode6LoopExport) {
+        applyPlayMode6ExportLoopState(startedAt, 0);
+        renderMode6TextCanvas(startedAt);
+      } else if (isMode5LoopExport) {
+        syncMode5ExportVisuals(0);
+      }
       drawCurrentFrameToExportCanvas(exportCanvas, exportCtx);
       recorder.start(100);
       frameId = requestAnimationFrame(draw);
@@ -7603,18 +8720,33 @@
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `olab-playmode-${new Date().toISOString().replace(/[:.]/g, "-")}.webm`;
+      anchor.download = `olab-playmode-${new Date().toISOString().replace(/[:.]/g, "-")}.${getVideoExportExtension(mimeType)}`;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
       setTimeout(() => URL.revokeObjectURL(url), 2000);
-      copyStatus.textContent = "Exported play mode video.";
+      copyStatus.textContent = mimeType.includes("mp4")
+        ? "Exported play mode video."
+        : "Exported play mode video as WebM. This browser did not expose MP4 recording.";
     } catch (_error) {
       copyStatus.textContent = "Video export failed.";
     } finally {
+      if (videoExport.mode6SavedState) {
+        restorePlayMode6VideoState(videoExport.mode6SavedState);
+      }
+      if (videoExport.mode5SavedState) {
+        restorePlayMode5VideoState(videoExport.mode5SavedState);
+      }
+      videoExport.mode6LoopElapsedMs = null;
+      videoExport.mode6SavedState = null;
+      videoExport.mode5LoopElapsedMs = null;
+      videoExport.mode5SavedState = null;
       videoExport.active = false;
       cancelAnimationFrame(frameId);
       stream.getTracks().forEach((track) => track.stop());
+      if (state.playMode === "play5") {
+        renderMode6TextCanvas(performance.now());
+      }
       syncOutputControls();
     }
   }
@@ -7693,7 +8825,11 @@
       rotVelX = 0;
       rotVelY = 0;
       rotVelZ = 0;
-      applyPlayMode6State(timeMs);
+      if (videoExport.active && Number.isFinite(videoExport.mode6LoopElapsedMs)) {
+        applyPlayMode6ExportLoopState(timeMs, videoExport.mode6LoopElapsedMs);
+      } else {
+        applyPlayMode6State(timeMs);
+      }
     } else if (state.playMode === "play6") {
       isDraggingModel = false;
       dragModelMode = "rotate";
@@ -7707,18 +8843,23 @@
       rotVelX = 0;
       rotVelY = 0;
       rotVelZ = 0;
+      if (videoExport.active && Number.isFinite(videoExport.mode5LoopElapsedMs)) {
+        applyPlayMode5ExportLoopState(timeMs, videoExport.mode5LoopElapsedMs);
+      } else {
+        applyPlayMode5State(timeMs);
+      }
+    } else if (state.playMode === "play4") {
+      isDraggingModel = false;
+      dragModelMode = "rotate";
+      rotVelX = 0;
+      rotVelY = 0;
+      rotVelZ = 0;
       applyPlayMode5State(timeMs);
     } else if (
-      state.playMode === "play1" ||
-      state.playMode === "play4"
+      state.playMode === "play1"
     ) {
-      if (
-        state.playMode === "play1" ||
-        state.playMode === "play4"
-      ) {
-        if (timeMs >= playMotion.nextChangeMs) {
-          schedulePlayOrbitTargets(timeMs);
-        }
+      if (timeMs >= playMotion.nextChangeMs) {
+        schedulePlayOrbitTargets(timeMs);
       }
       const blend = 1 - Math.exp(-dt * 1.8);
       playMotion.vx += (playMotion.targetX - playMotion.vx) * blend;
@@ -7733,17 +8874,6 @@
       rotVelX = 0;
       rotVelY = 0;
 
-      if (state.playMode === "play4") {
-        const fixedPlay3Length = constants.fixedPlay3LengthSvg;
-        const fixedPlay3Diameter = getFixedPlay3DiameterSvg();
-        if (
-          Math.abs(frustumLayout.lengthSvg - fixedPlay3Length) > 0.7 ||
-          Math.abs(frustumLayout.largeDiameterSvg - fixedPlay3Diameter) > 0.7
-        ) {
-          rebuildFrustumFor(fixedPlay3Length, fixedPlay3Diameter);
-        }
-      }
-
     } else {
       stage.rotY += rotVelY;
       stage.rotX += rotVelX;
@@ -7751,10 +8881,11 @@
       rotVelY *= 0.92;
       rotVelX *= 0.92;
       rotVelZ *= 0.92;
-      if (state.typeLayout === "layout1") {
-        applyTypeGridState();
-      }
       applyTypographyLayout();
+    }
+
+    if (state.typeLayout === "layout1") {
+      applyTypeGridState();
     }
 
     updateTypographyShapeVisibility();

@@ -1,6 +1,6 @@
 @font-face {
   font-family: "Aeonik Fono Exact";
-  src: url("file:///Users/maxli/Library/Fonts/AeonikFono-Medium.otf") format("opentype");
+  src: url("file:///Users/huyi/Library/Fonts/AeonikFono-Medium.otf") format("opentype");
   font-style: normal;
   font-weight: 500;
   font-display: swap;
@@ -616,6 +616,11 @@ body {
   background: rgba(255, 255, 255, 0.62);
 }
 
+.mode6-segment-meta {
+  display: grid;
+  gap: 8px;
+}
+
 .mode6-segment-header {
   display: flex;
   align-items: center;
@@ -649,6 +654,48 @@ body {
 .mode6-segment-input:focus {
   border-color: rgba(36, 87, 255, 0.5);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.mode6-segment-type {
+  width: 100%;
+}
+
+.mode6-segment-image {
+  display: grid;
+  gap: 8px;
+}
+
+.mode6-segment-image-preview {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(16, 17, 20, 0.04);
+  object-fit: contain;
+}
+
+.mode6-segment-image-empty {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: rgba(16, 17, 20, 0.03);
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.mode6-segment-image-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mode6-segment-image-actions {
+  display: flex;
+  gap: 6px;
 }
 
 .mode6-position-editor {
@@ -1091,11 +1138,35 @@ body {
   position: absolute;
   left: 0;
   top: 0;
-  display: inline-block;
+  display: block;
+  width: 1px;
+  height: 1px;
+  max-width: none;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+}
+
+.type-text-box-svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: visible;
+  color: var(--text);
+  pointer-events: none;
+}
+
+.type-text-box-ink {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: none;
   width: max-content;
   max-width: none;
-  min-width: 1ch;
-  min-height: 1em;
+  min-width: 0;
+  min-height: 0;
   padding: 0;
   margin: 0;
   border: none;
@@ -1108,10 +1179,11 @@ body {
     sans-serif;
   font-weight: 500;
   line-height: 1;
-  letter-spacing: 0;
+  letter-spacing: -0.03em;
   white-space: pre;
   overflow-wrap: normal;
   word-break: keep-all;
+  overflow: visible;
   outline: none;
   cursor: inherit;
   user-select: none;
@@ -1120,17 +1192,20 @@ body {
   font-synthesis: none;
 }
 
-.type-text-box.is-editing .type-text-box-content {
+.type-text-box.is-editing .type-text-box-ink {
+  display: block;
+  color: transparent;
+  caret-color: var(--text);
   cursor: text;
   user-select: text;
 }
 
-.type-text-box-content[contenteditable="true"]:focus-visible {
+.type-text-box-ink[contenteditable="true"]:focus-visible {
   border-color: rgba(21, 22, 24, 0.42);
   outline: none;
 }
 
-.type-text-box-content:empty::before {
+.type-text-box-ink:empty::before {
   content: attr(data-placeholder);
   color: rgba(21, 22, 24, 0.32);
 }
@@ -1267,6 +1342,16 @@ body {
   backface-visibility: visible;
   -webkit-backface-visibility: visible;
   will-change: transform;
+}
+
+#mode5-olab-lab,
+.mode5-olab-lab {
+  transform-style: preserve-3d;
+  transform-box: view-box;
+  transform-origin: 18.95425px 27.587105px;
+  backface-visibility: visible;
+  -webkit-backface-visibility: visible;
+  will-change: transform, opacity;
 }
 
 #mode5-olab-o-svg,
