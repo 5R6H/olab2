@@ -9,17 +9,18 @@
   <body>
     <aside class="ui-panel">
       <nav class="ui-tabs" aria-label="Control sections">
-        <button class="ui-tab is-active" type="button" data-tab-target="foundation" aria-selected="true">Foundation</button>
+        <button class="ui-tab is-active" type="button" data-tab-target="foundation" aria-selected="true">Basics</button>
         <button class="ui-tab" type="button" data-tab-target="layout" aria-selected="false">Layout</button>
         <button class="ui-tab" type="button" data-tab-target="motion" aria-selected="false">Motion</button>
         <button class="ui-tab" type="button" data-tab-target="output" aria-selected="false">Output</button>
+        <button class="ui-tab" type="button" data-tab-target="developer" aria-selected="false">Dev</button>
       </nav>
 
       <section class="ui-section tab-panel is-active" data-tab-panel="foundation">
         <div class="section-head">
           <p class="section-index">01</p>
           <div class="section-copy">
-            <h2>Foundation</h2>
+            <h2>Basics</h2>
           </div>
         </div>
 
@@ -47,6 +48,11 @@
             <span>Frame background</span>
             <input id="frame-bg-color" type="color" value="#ffffff" />
           </label>
+          <div
+            class="brand-color-presets"
+            data-color-presets-for="frame-bg-color"
+            aria-label="Frame background brand color presets"
+          ></div>
 
           <div class="frame-size">
             <label class="field compact">
@@ -63,49 +69,43 @@
             <span>Background image</span>
             <input id="frame-image-input" type="file" accept="image/*" />
           </label>
-          <button id="clear-image-btn" type="button">Clear Image</button>
+          <div class="field-grid field-grid-compact">
+            <label class="field compact">
+              <span>Image fit</span>
+              <select id="frame-image-fit-select">
+                <option value="contain" selected>Contain / fit</option>
+                <option value="fill">Fill</option>
+              </select>
+            </label>
+            <label class="field compact">
+              <span>Image area</span>
+              <select id="frame-image-scope-select">
+                <option value="frame" selected>Whole frame</option>
+                <option value="grid">Grid area</option>
+              </select>
+            </label>
+            <label class="field compact">
+              <span>Image layer</span>
+              <select id="frame-image-layer-select">
+                <option value="back" selected>Behind mark & text</option>
+                <option value="front">In front of mark & text</option>
+              </select>
+            </label>
+          </div>
+          <button id="clear-image-btn" type="button" hidden>Clear Image</button>
         </section>
 
         <section class="ui-group">
           <h2 class="group-title">Appearance</h2>
           <label class="field">
-            <span>Shape color</span>
+            <span>Ink color</span>
             <input id="shape-color" type="color" value="#1c1c1c" />
           </label>
-
-          <label class="field">
-            <span>Render mode</span>
-            <select id="shading-mode">
-              <option value="flat" selected>Flat color</option>
-              <option value="lit">Lit</option>
-            </select>
-          </label>
-        </section>
-
-        <section class="ui-group">
-          <h2 class="group-title">Geometry</h2>
-          <label class="field">
-            <span>Frustum length</span>
-            <input id="frustum-length-range" type="range" min="489.493138" max="10000" step="0.1" value="489.493138" />
-            <input id="frustum-length-number" type="number" min="489.493138" max="10000" step="0.1" value="489.493138" />
-          </label>
-
-          <label class="field">
-            <span>Large base diameter</span>
-            <input id="frustum-diameter-range" type="range" min="160.829039" max="3285.6240" step="0.1" value="160.829039" />
-            <input id="frustum-diameter-number" type="number" min="160.829039" max="3285.6240" step="0.1" value="160.829039" />
-          </label>
-
-          <label class="field">
-            <span>Gap (x sphere diameter)</span>
-            <input id="gap-range" type="range" min="0" max="8" step="0.1" value="0.5" />
-            <input id="gap-number" type="number" min="0" max="8" step="0.1" value="0.5" />
-          </label>
-
-          <label class="toggle">
-            <input id="proportion-lock" type="checkbox" checked />
-            <span>Scale proportionally</span>
-          </label>
+          <div
+            class="brand-color-presets"
+            data-color-presets-for="shape-color"
+            aria-label="Ink color brand color presets"
+          ></div>
         </section>
 
         <section class="ui-group">
@@ -121,6 +121,10 @@
             <input id="perspective-range" type="range" min="0" max="200" step="0.1" value="0" />
             <input id="perspective-number" type="number" min="0" max="200" step="0.1" value="0" />
           </label>
+        </section>
+
+        <section class="ui-group ui-actions">
+          <button id="reset-btn" type="button">Reset All</button>
         </section>
       </section>
 
@@ -142,34 +146,100 @@
             </select>
           </label>
 
-          <label class="field">
+          <div class="field type-mark-mode-field">
             <span>Mark type</span>
-            <select id="type-mark-mode-select">
+            <select id="type-mark-mode-select" class="control-hidden" aria-hidden="true" tabindex="-1">
               <option value="icon" selected>Icon only</option>
               <option value="combination">Combination mark</option>
               <option value="separate">Separate mark</option>
               <option value="wordmark">Wordmark only</option>
             </select>
-          </label>
+            <div class="type-mark-mode-grid" role="group" aria-label="Mark type">
+              <button class="type-mark-mode-card" type="button" data-type-mark-mode="icon" aria-label="Icon only" aria-pressed="true">
+                <span class="mark-preview mark-preview-icon" aria-hidden="true">
+                  <svg class="mark-preview-svg mark-preview-shape-svg" viewBox="0 0 459 114" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M458.867 8.59961L169.969 29.3402V84.013L458.867 104.754V8.59961Z" fill="currentColor"/>
+                    <ellipse cx="56.6559" cy="56.6588" rx="56.6559" ry="56.6588" fill="currentColor"/>
+                  </svg>
+                </span>
+              </button>
+              <button class="type-mark-mode-card" type="button" data-type-mark-mode="combination" aria-label="Combination mark" aria-pressed="false">
+                <span class="mark-preview mark-preview-combination" aria-hidden="true">
+                  <svg class="mark-preview-svg mark-preview-shape-svg" viewBox="0 0 459 114" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M458.867 8.59961L169.969 29.3402V84.013L458.867 104.754V8.59961Z" fill="currentColor"/>
+                    <ellipse cx="56.6559" cy="56.6588" rx="56.6559" ry="56.6588" fill="currentColor"/>
+                  </svg>
+                  <svg class="mark-preview-svg mark-preview-word-svg" viewBox="0 114 459 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M198.323 224.072H228.161V252.549H194.829C190.879 252.549 187.168 250.658 184.847 247.462L172.325 230.225C170.793 228.117 169.969 225.579 169.969 222.973L169.969 114.062H198.323V224.072Z" fill="currentColor"/>
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M56.6597 140.434C87.9489 140.435 113.313 165.805 113.313 197.096C113.312 228.387 87.9483 253.751 56.6597 253.753C25.3697 253.753 0.000781417 228.388 0 197.096C0 165.804 25.3691 140.434 56.6597 140.434ZM56.6415 169.76C41.5467 169.761 29.3128 182 29.3128 197.096C29.3128 212.192 41.5467 224.431 56.6415 224.432C71.7373 224.432 83.9762 212.193 83.9762 197.096C83.9762 182 71.7373 169.76 56.6415 169.76Z" fill="currentColor"/>
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M291.572 140.865C314.491 140.867 333.067 159.451 333.069 182.37V224.172H346.727V252.454H311.959V228.738H304.964L298.044 239.059C291.884 248.246 281.55 253.759 270.489 253.759L268.657 253.711H268.62C249.777 252.758 235.465 239.24 234.49 220.343V220.306L234.441 218.474V218.444C234.442 198.744 251.029 182.318 271.412 182.364L288.188 182.397L304.964 182.43V180.883C304.962 173.487 298.968 167.493 291.572 167.491L248.809 167.486L248.822 140.859L291.572 140.865ZM271.351 206.399C265.473 206.386 260.727 211.104 260.726 216.884C260.727 222.437 265.174 227.473 271.624 227.473C284.644 227.472 303.962 206.477 303.962 206.477V206.399H271.351Z" fill="currentColor"/>
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M382.678 163.139H389.699L395.697 153.888C401.253 145.319 410.782 140.161 420.995 140.195C444.03 140.211 458.812 162.113 458.812 189.885V203.726C458.812 231.068 444.802 253.768 420.995 253.768C410.835 253.768 401.424 248.421 396.224 239.693L389.699 228.743H382.678V252.567H354.16L354.16 114.062H382.678V163.139ZM408.771 167.761C395.931 167.763 386.913 180.993 386.913 189.885V203.726C386.913 214.701 397.898 226.177 408.771 226.177C422.132 226.175 430.628 214.158 430.628 203.726V189.885C430.625 181.133 423.509 167.761 408.771 167.761Z" fill="currentColor"/>
+                  </svg>
+                </span>
+              </button>
+              <button class="type-mark-mode-card" type="button" data-type-mark-mode="separate" aria-label="Separate mark" aria-pressed="false">
+                <span class="mark-preview mark-preview-separate" aria-hidden="true">
+                  <svg class="mark-preview-svg mark-preview-shape-svg" viewBox="0 0 459 114" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M458.867 8.59961L169.969 29.3402V84.013L458.867 104.754V8.59961Z" fill="currentColor"/>
+                    <ellipse cx="56.6559" cy="56.6588" rx="56.6559" ry="56.6588" fill="currentColor"/>
+                  </svg>
+                  <svg class="mark-preview-svg mark-preview-word-svg" viewBox="0 114 459 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M198.323 224.072H228.161V252.549H194.829C190.879 252.549 187.168 250.658 184.847 247.462L172.325 230.225C170.793 228.117 169.969 225.579 169.969 222.973L169.969 114.062H198.323V224.072Z" fill="currentColor"/>
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M56.6597 140.434C87.9489 140.435 113.313 165.805 113.313 197.096C113.312 228.387 87.9483 253.751 56.6597 253.753C25.3697 253.753 0.000781417 228.388 0 197.096C0 165.804 25.3691 140.434 56.6597 140.434ZM56.6415 169.76C41.5467 169.761 29.3128 182 29.3128 197.096C29.3128 212.192 41.5467 224.431 56.6415 224.432C71.7373 224.432 83.9762 212.193 83.9762 197.096C83.9762 182 71.7373 169.76 56.6415 169.76Z" fill="currentColor"/>
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M291.572 140.865C314.491 140.867 333.067 159.451 333.069 182.37V224.172H346.727V252.454H311.959V228.738H304.964L298.044 239.059C291.884 248.246 281.55 253.759 270.489 253.759L268.657 253.711H268.62C249.777 252.758 235.465 239.24 234.49 220.343V220.306L234.441 218.474V218.444C234.442 198.744 251.029 182.318 271.412 182.364L288.188 182.397L304.964 182.43V180.883C304.962 173.487 298.968 167.493 291.572 167.491L248.809 167.486L248.822 140.859L291.572 140.865ZM271.351 206.399C265.473 206.386 260.727 211.104 260.726 216.884C260.727 222.437 265.174 227.473 271.624 227.473C284.644 227.472 303.962 206.477 303.962 206.477V206.399H271.351Z" fill="currentColor"/>
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M382.678 163.139H389.699L395.697 153.888C401.253 145.319 410.782 140.161 420.995 140.195C444.03 140.211 458.812 162.113 458.812 189.885V203.726C458.812 231.068 444.802 253.768 420.995 253.768C410.835 253.768 401.424 248.421 396.224 239.693L389.699 228.743H382.678V252.567H354.16L354.16 114.062H382.678V163.139ZM408.771 167.761C395.931 167.763 386.913 180.993 386.913 189.885V203.726C386.913 214.701 397.898 226.177 408.771 226.177C422.132 226.175 430.628 214.158 430.628 203.726V189.885C430.625 181.133 423.509 167.761 408.771 167.761Z" fill="currentColor"/>
+                  </svg>
+                </span>
+              </button>
+              <button class="type-mark-mode-card" type="button" data-type-mark-mode="wordmark" aria-label="Wordmark only" aria-pressed="false">
+                <span class="mark-preview mark-preview-wordmark" aria-hidden="true">
+                  <svg class="mark-preview-svg mark-preview-word-svg" viewBox="0 114 459 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M198.323 224.072H228.161V252.549H194.829C190.879 252.549 187.168 250.658 184.847 247.462L172.325 230.225C170.793 228.117 169.969 225.579 169.969 222.973L169.969 114.062H198.323V224.072Z" fill="currentColor"/>
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M56.6597 140.434C87.9489 140.435 113.313 165.805 113.313 197.096C113.312 228.387 87.9483 253.751 56.6597 253.753C25.3697 253.753 0.000781417 228.388 0 197.096C0 165.804 25.3691 140.434 56.6597 140.434ZM56.6415 169.76C41.5467 169.761 29.3128 182 29.3128 197.096C29.3128 212.192 41.5467 224.431 56.6415 224.432C71.7373 224.432 83.9762 212.193 83.9762 197.096C83.9762 182 71.7373 169.76 56.6415 169.76Z" fill="currentColor"/>
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M291.572 140.865C314.491 140.867 333.067 159.451 333.069 182.37V224.172H346.727V252.454H311.959V228.738H304.964L298.044 239.059C291.884 248.246 281.55 253.759 270.489 253.759L268.657 253.711H268.62C249.777 252.758 235.465 239.24 234.49 220.343V220.306L234.441 218.474V218.444C234.442 198.744 251.029 182.318 271.412 182.364L288.188 182.397L304.964 182.43V180.883C304.962 173.487 298.968 167.493 291.572 167.491L248.809 167.486L248.822 140.859L291.572 140.865ZM271.351 206.399C265.473 206.386 260.727 211.104 260.726 216.884C260.727 222.437 265.174 227.473 271.624 227.473C284.644 227.472 303.962 206.477 303.962 206.477V206.399H271.351Z" fill="currentColor"/>
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M382.678 163.139H389.699L395.697 153.888C401.253 145.319 410.782 140.161 420.995 140.195C444.03 140.211 458.812 162.113 458.812 189.885V203.726C458.812 231.068 444.802 253.768 420.995 253.768C410.835 253.768 401.424 248.421 396.224 239.693L389.699 228.743H382.678V252.567H354.16L354.16 114.062H382.678V163.139ZM408.771 167.761C395.931 167.763 386.913 180.993 386.913 189.885V203.726C386.913 214.701 397.898 226.177 408.771 226.177C422.132 226.175 430.628 214.158 430.628 203.726V189.885C430.625 181.133 423.509 167.761 408.771 167.761Z" fill="currentColor"/>
+                  </svg>
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div class="field type-placement-field" id="type-placement-field">
+            <span>Placement</span>
+            <div id="type-placement-grid" class="type-placement-grid" role="group" aria-label="Logo placement">
+              <button type="button" data-type-logo-placement="top-left" aria-label="Top left" title="Top left">
+                <span class="placement-dot" aria-hidden="true"></span>
+              </button>
+              <button type="button" data-type-logo-placement="top-center" aria-label="Top center" title="Top center">
+                <span class="placement-dot" aria-hidden="true"></span>
+              </button>
+              <button type="button" data-type-logo-placement="top-right" aria-label="Top right" title="Top right">
+                <span class="placement-dot" aria-hidden="true"></span>
+              </button>
+              <button type="button" data-type-logo-placement="middle-left" aria-label="Middle left" title="Middle left">
+                <span class="placement-dot" aria-hidden="true"></span>
+              </button>
+              <button type="button" data-type-logo-placement="center" aria-label="Center" title="Center">
+                <span class="placement-dot" aria-hidden="true"></span>
+              </button>
+              <button type="button" data-type-logo-placement="middle-right" aria-label="Middle right" title="Middle right">
+                <span class="placement-dot" aria-hidden="true"></span>
+              </button>
+              <button type="button" data-type-logo-placement="bottom-left" aria-label="Bottom left" title="Bottom left">
+                <span class="placement-dot" aria-hidden="true"></span>
+              </button>
+              <button type="button" data-type-logo-placement="bottom-center" aria-label="Bottom center" title="Bottom center">
+                <span class="placement-dot" aria-hidden="true"></span>
+              </button>
+              <button type="button" data-type-logo-placement="bottom-right" aria-label="Bottom right" title="Bottom right">
+                <span class="placement-dot" aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
 
           <label class="toggle">
             <input id="type-grid-toggle" type="checkbox" checked />
             <span>Show frame grid</span>
-          </label>
-
-          <button id="type-add-text-btn" type="button">Add Text</button>
-
-          <div class="field-grid field-grid-compact">
-            <button id="type-text-scale-up-btn" type="button">Scale ×2</button>
-            <button id="type-text-scale-down-btn" type="button">Scale ÷2</button>
-          </div>
-
-          <label class="field">
-            <span>Current text align</span>
-            <select id="type-text-align-select">
-              <option value="left" selected>Left</option>
-              <option value="center">Center</option>
-            </select>
           </label>
 
           <div class="field-grid field-grid-compact">
@@ -199,6 +269,17 @@
               <input id="type-grid-baseline-input" type="number" min="6" max="6" step="1" value="6" disabled />
             </label>
           </div>
+
+          <button id="type-add-text-btn" type="button">Add Text</button>
+          <button id="type-clear-texts-btn" type="button">Clear All Text</button>
+
+          <label class="field">
+            <span>Current text align</span>
+            <select id="type-text-align-select">
+              <option value="left" selected>Left</option>
+              <option value="center">Center</option>
+            </select>
+          </label>
         </section>
       </section>
 
@@ -284,8 +365,8 @@
             <label class="field">
               <span>Center mode</span>
               <select id="mode5-center-mode">
-                <option value="anchor" selected>Sphere / O center</option>
-                <option value="full">Whole figure center (realtime)</option>
+                <option value="anchor">Sphere / O center</option>
+                <option value="full" selected>Whole figure center (realtime)</option>
               </select>
             </label>
             <label class="field mode5-shape-only-control">
@@ -296,10 +377,33 @@
               <span>Hold seconds</span>
               <input id="mode5-shape-hold-seconds-input" type="number" min="0" max="20" step="0.1" value="0" />
             </label>
-            <label class="toggle">
-              <input id="mode5-stack-toggle" type="checkbox" />
-              <span>Stacked swap</span>
-            </label>
+            <div class="mode5-switch-layout-control">
+              <input id="mode5-stack-toggle" type="checkbox" hidden />
+              <div class="mode5-switch-layout-grid" role="group" aria-label="Switch layout">
+                <button class="mode5-switch-layout-option" type="button" data-mode5-stack-choice="single" aria-pressed="true">
+                  <span class="mode5-switch-preview mode5-switch-preview-single" aria-hidden="true">
+                    <svg class="mode5-preview-svg mode5-preview-shape-svg" viewBox="0 0 459 114" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M458.867 8.59961L169.969 29.3402V84.013L458.867 104.754V8.59961Z" fill="currentColor"/>
+                      <ellipse cx="56.6559" cy="56.6588" rx="56.6559" ry="56.6588" fill="currentColor"/>
+                    </svg>
+                  </span>
+                  <span class="mode5-switch-label">图形</span>
+                </button>
+                <button class="mode5-switch-layout-option" type="button" data-mode5-stack-choice="stack" aria-pressed="false">
+                  <span class="mode5-switch-preview mode5-switch-preview-stack" aria-hidden="true">
+                    <svg class="mode5-preview-svg mode5-preview-combo-svg" viewBox="0 0 459 254" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M458.867 8.59961L169.969 29.3402V84.013L458.867 104.754V8.59961Z" fill="currentColor"/>
+                      <ellipse cx="56.6559" cy="56.6588" rx="56.6559" ry="56.6588" fill="currentColor"/>
+                      <path fill-rule="evenodd" clip-rule="evenodd" d="M198.323 224.072H228.161V252.549H194.829C190.879 252.549 187.168 250.658 184.847 247.462L172.325 230.225C170.793 228.117 169.969 225.579 169.969 222.973L169.969 114.062H198.323V224.072Z" fill="currentColor"/>
+                      <path fill-rule="evenodd" clip-rule="evenodd" d="M56.6597 140.434C87.9489 140.435 113.313 165.805 113.313 197.096C113.312 228.387 87.9483 253.751 56.6597 253.753C25.3697 253.753 0.000781417 228.388 0 197.096C0 165.804 25.3691 140.434 56.6597 140.434ZM56.6415 169.76C41.5467 169.761 29.3128 182 29.3128 197.096C29.3128 212.192 41.5467 224.431 56.6415 224.432C71.7373 224.432 83.9762 212.193 83.9762 197.096C83.9762 182 71.7373 169.76 56.6415 169.76Z" fill="currentColor"/>
+                      <path fill-rule="evenodd" clip-rule="evenodd" d="M291.572 140.865C314.491 140.867 333.067 159.451 333.069 182.37V224.172H346.727V252.454H311.959V228.738H304.964L298.044 239.059C291.884 248.246 281.55 253.759 270.489 253.759L268.657 253.711H268.62C249.777 252.758 235.465 239.24 234.49 220.343V220.306L234.441 218.474V218.444C234.442 198.744 251.029 182.318 271.412 182.364L288.188 182.397L304.964 182.43V180.883C304.962 173.487 298.968 167.493 291.572 167.491L248.809 167.486L248.822 140.859L291.572 140.865ZM271.351 206.399C265.473 206.386 260.727 211.104 260.726 216.884C260.727 222.437 265.174 227.473 271.624 227.473C284.644 227.472 303.962 206.477 303.962 206.477V206.399H271.351Z" fill="currentColor"/>
+                      <path fill-rule="evenodd" clip-rule="evenodd" d="M382.678 163.139H389.699L395.697 153.888C401.253 145.319 410.782 140.161 420.995 140.195C444.03 140.211 458.812 162.113 458.812 189.885V203.726C458.812 231.068 444.802 253.768 420.995 253.768C410.835 253.768 401.424 248.421 396.224 239.693L389.699 228.743H382.678V252.567H354.16L354.16 114.062H382.678V163.139ZM408.771 167.761C395.931 167.763 386.913 180.993 386.913 189.885V203.726C386.913 214.701 397.898 226.177 408.771 226.177C422.132 226.175 430.628 214.158 430.628 203.726V189.885C430.625 181.133 423.509 167.761 408.771 167.761Z" fill="currentColor"/>
+                    </svg>
+                  </span>
+                  <span class="mode5-switch-label">组合标识</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <div id="mode6-controls" class="mode6-controls" hidden>
@@ -365,10 +469,74 @@
           </div>
         </div>
         <section class="ui-group ui-output">
-          <button id="reset-btn" type="button">Reset</button>
-          <button id="copy-svg-btn" type="button">Copy Shape SVG</button>
+          <h2 class="group-title">Presets</h2>
+          <label class="field">
+            <span>Preset name</span>
+            <input id="preset-name-input" type="text" placeholder="Untitled preset" />
+          </label>
+          <button id="save-preset-btn" type="button">Save Preset</button>
+          <label class="field">
+            <span>Saved presets</span>
+            <select id="preset-select">
+              <option value="">No saved presets</option>
+            </select>
+          </label>
+          <div class="field-grid field-grid-compact">
+            <button id="load-preset-btn" type="button">Load</button>
+            <button id="delete-preset-btn" type="button">Delete</button>
+          </div>
+        </section>
+        <section class="ui-group ui-output">
+          <h2 class="group-title">Export</h2>
+          <button id="copy-svg-btn" type="button">Copy Frame SVG</button>
           <button id="export-video-btn" type="button" hidden>Export Video</button>
           <p id="copy-status" class="copy-status"></p>
+        </section>
+      </section>
+
+      <section class="ui-section tab-panel" data-tab-panel="developer" hidden>
+        <div class="section-head">
+          <p class="section-index">05</p>
+          <div class="section-copy">
+            <h2>Developer</h2>
+          </div>
+        </div>
+
+        <section class="ui-group">
+          <h2 class="group-title">Rendering</h2>
+          <label class="field">
+            <span>Render mode</span>
+            <select id="shading-mode">
+              <option value="flat" selected>Flat color</option>
+              <option value="lit">Lit</option>
+            </select>
+          </label>
+        </section>
+
+        <section class="ui-group">
+          <h2 class="group-title">Geometry</h2>
+          <label class="field">
+            <span>Frustum length</span>
+            <input id="frustum-length-range" type="range" min="489.493138" max="10000" step="0.1" value="489.493138" />
+            <input id="frustum-length-number" type="number" min="489.493138" max="10000" step="0.1" value="489.493138" />
+          </label>
+
+          <label class="field">
+            <span>Large base diameter</span>
+            <input id="frustum-diameter-range" type="range" min="160.829039" max="3285.6240" step="0.1" value="160.829039" />
+            <input id="frustum-diameter-number" type="number" min="160.829039" max="3285.6240" step="0.1" value="160.829039" />
+          </label>
+
+          <label class="field">
+            <span>Gap (x sphere diameter)</span>
+            <input id="gap-range" type="range" min="0" max="8" step="0.1" value="0.5" />
+            <input id="gap-number" type="number" min="0" max="8" step="0.1" value="0.5" />
+          </label>
+
+          <label class="toggle">
+            <input id="proportion-lock" type="checkbox" checked />
+            <span>Scale proportionally</span>
+          </label>
         </section>
       </section>
     </aside>
@@ -382,6 +550,11 @@
           <div id="type-grid-baselines"></div>
         </div>
         <div id="type-text-layer" aria-hidden="true"></div>
+        <div id="type-text-toolbar" class="type-text-toolbar" aria-hidden="true">
+          <button id="type-text-scale-up-btn" type="button">×2</button>
+          <button id="type-text-scale-down-btn" type="button">÷2</button>
+          <button id="type-text-delete-btn" type="button">Delete</button>
+        </div>
         <div id="mode6-text-orbit" class="mode6-text-orbit" aria-hidden="true">
           <div id="mode6-text-carrier" class="mode6-text-carrier">
             <div id="mode6-middle-text" class="mode6-middle-text">INSERT TEXT</div>

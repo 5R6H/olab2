@@ -7,9 +7,18 @@
   const typeGridToggle = document.getElementById("type-grid-toggle");
   const typeLayoutSelect = document.getElementById("type-layout-select");
   const typeMarkModeSelect = document.getElementById("type-mark-mode-select");
+  const typeMarkModeButtons = Array.from(document.querySelectorAll("[data-type-mark-mode]"));
+  const typePlacementField = document.getElementById("type-placement-field");
+  const typePlacementGrid = document.getElementById("type-placement-grid");
+  const typeLogoPlacementButtons = Array.from(
+    document.querySelectorAll("[data-type-logo-placement]"),
+  );
   const typeAddTextButton = document.getElementById("type-add-text-btn");
+  const typeClearTextsButton = document.getElementById("type-clear-texts-btn");
+  const typeTextToolbar = document.getElementById("type-text-toolbar");
   const typeTextScaleUpButton = document.getElementById("type-text-scale-up-btn");
   const typeTextScaleDownButton = document.getElementById("type-text-scale-down-btn");
+  const typeTextDeleteButton = document.getElementById("type-text-delete-btn");
   const typeTextAlignSelect = document.getElementById("type-text-align-select");
   const typeLayout1EndColInput = document.getElementById("type-layout1-end-col-input");
   const typeGridColumnsInput = document.getElementById("type-grid-columns-input");
@@ -45,6 +54,7 @@
   const mode6Controls = document.getElementById("mode6-controls");
   const mode5CenterModeSelect = document.getElementById("mode5-center-mode");
   const mode5StackToggle = document.getElementById("mode5-stack-toggle");
+  const mode5StackChoiceButtons = Array.from(document.querySelectorAll("[data-mode5-stack-choice]"));
   const mode5ShapeSpinSecondsInput = document.getElementById("mode5-shape-spin-seconds-input");
   const mode5ShapeHoldSecondsInput = document.getElementById("mode5-shape-hold-seconds-input");
   const mode6SegmentsList = document.getElementById("mode6-segments-list");
@@ -75,6 +85,9 @@
   const frameWidthInput = document.getElementById("frame-width-input");
   const frameHeightInput = document.getElementById("frame-height-input");
   const frameImageInput = document.getElementById("frame-image-input");
+  const frameImageFitSelect = document.getElementById("frame-image-fit-select");
+  const frameImageScopeSelect = document.getElementById("frame-image-scope-select");
+  const frameImageLayerSelect = document.getElementById("frame-image-layer-select");
   const clearImageButton = document.getElementById("clear-image-btn");
   const mode4ImagesInput = document.getElementById("mode4-images-input");
   const clearMode4ImagesButton = document.getElementById("clear-mode4-images-btn");
@@ -84,6 +97,11 @@
   const resetButton = document.getElementById("reset-btn");
   const copySvgButton = document.getElementById("copy-svg-btn");
   const exportVideoButton = document.getElementById("export-video-btn");
+  const presetNameInput = document.getElementById("preset-name-input");
+  const presetSelect = document.getElementById("preset-select");
+  const savePresetButton = document.getElementById("save-preset-btn");
+  const loadPresetButton = document.getElementById("load-preset-btn");
+  const deletePresetButton = document.getElementById("delete-preset-btn");
   const rotXInput = document.getElementById("rot-x-input");
   const rotYInput = document.getElementById("rot-y-input");
   const rotZInput = document.getElementById("rot-z-input");
@@ -100,6 +118,9 @@
   const uiTabButtons = Array.from(document.querySelectorAll("[data-tab-target]"));
   const uiTabPanels = Array.from(document.querySelectorAll("[data-tab-panel]"));
   const rangeInputs = Array.from(document.querySelectorAll('input[type="range"]'));
+  const brandColorPresetGroups = Array.from(
+    document.querySelectorAll("[data-color-presets-for]"),
+  );
 
   function setActiveUiTab(tabName) {
     uiTabButtons.forEach((button) => {
@@ -303,9 +324,14 @@
     defaultFrameWidth: 600,
     defaultFrameHeight: 800,
     defaultFrameBgColor: "#ffffff",
+    defaultFrameImageFit: "contain",
+    defaultFrameImageScope: "frame",
+    defaultFrameImageLayer: "back",
     defaultTypeGridVisible: true,
     defaultTypeLayout: "layout1",
     defaultTypeMarkMode: "icon",
+    defaultTypeLogoPlacement: "top-left",
+    defaultTypeSeparateAlign: "left",
     defaultTypeLayout1EndColumn: 3,
     defaultTypeGridColumns: 6,
     minTypeGridColumns: 2,
@@ -326,12 +352,15 @@
     typeFontDescender: 205,
     typeFontRasterAlphaThreshold: 24,
     typeFontRasterVerticalAlphaThreshold: 1,
+    typeTextSphereHeightRatio: 0.95,
     defaultColorHex: "#1c1c1c",
     defaultPerspectiveFovDeg: 0,
     minPerspectiveFovDeg: 0,
     maxPerspectiveFovDeg: 200,
     maxPerspectiveEffectiveFovDeg: 170,
-    minPerspectiveEffectiveFovDeg: 12,
+    minPerspectiveEffectiveFovDeg: 0.2,
+    perspectiveScaleReferenceFovDeg: 12,
+    presetStorageKey: "olab2-studio-presets-v1",
     defaultPlay1EnvironmentEnabled: false,
     defaultPlay1PerspectiveFovDeg: 130,
     defaultPlay6ZoomZ: 57.6,
@@ -350,7 +379,7 @@
     mode5OlabOCenterXSvg: 18.95425,
     mode5OlabOCenterYSvg: 27.587105,
     mode5OlabLabShiftSvg: 0,
-    defaultMode5CenterMode: "anchor",
+    defaultMode5CenterMode: "full",
     defaultMode6Text: "C1",
     defaultMode6Texts: [
       "C1",
@@ -389,6 +418,18 @@
     mode5StackCenterGapRatio:
       (203.697 - 51.6738) / 103.347,
   };
+
+  const brandColorPresets = [
+    { name: "olab Yellow", value: "#E7FF85" },
+    { name: "White", value: "#FFFFFF" },
+    { name: "Black", value: "#131411" },
+    { name: "Sky Blue", value: "#CDE8FF" },
+    { name: "Mint", value: "#DEFEDD" },
+    { name: "Warm Gray 1", value: "#F4F3F0" },
+    { name: "Warm Gray 3", value: "#DAD7D2" },
+    { name: "Warm Gray 7", value: "#989590" },
+    { name: "Warm Gray 11", value: "#3C3A36" },
+  ];
 
   mode5OlabInstances.forEach((instance) => {
     if (instance && instance.labGroup) {
@@ -474,9 +515,16 @@
     frameHeight: constants.defaultFrameHeight,
     framePreset: "custom",
     frameBgColor: constants.defaultFrameBgColor,
+    frameImageDataUrl: "",
+    frameImageName: "",
+    frameImageFit: constants.defaultFrameImageFit,
+    frameImageScope: constants.defaultFrameImageScope,
+    frameImageLayer: constants.defaultFrameImageLayer,
     typeGridVisible: constants.defaultTypeGridVisible,
     typeLayout: constants.defaultTypeLayout,
     typeMarkMode: constants.defaultTypeMarkMode,
+    typeLogoPlacement: constants.defaultTypeLogoPlacement,
+    typeSeparateAlign: constants.defaultTypeSeparateAlign,
     typeLayout1EndColumn: constants.defaultTypeLayout1EndColumn,
     typeGridColumns: constants.defaultTypeGridColumns,
     typeGridMargin: constants.defaultTypeGridMargin,
@@ -513,6 +561,10 @@
   const typeTextBoxElements = new Map();
   let nextTypeTextBoxId = 1;
   let typeTextDrag = null;
+  let hoveredTypeTextBoxId = null;
+  let typeTextToolbarHover = false;
+  let typeTextToolbarUpdateTimer = null;
+  let typeTextAltPressed = false;
   const svgNs = "http://www.w3.org/2000/svg";
   const typeTextMeasureCanvas = document.createElement("canvas");
   const typeTextMeasureContext = typeTextMeasureCanvas.getContext("2d");
@@ -1715,9 +1767,7 @@
 
   function getActiveCameraZForView(baseCameraZ, rawPerspective = state.perspectiveFovDeg) {
     const safeBaseCameraZ = Number.isFinite(baseCameraZ) ? baseCameraZ : state.cameraZ;
-    const referenceTan = Math.tan(
-      getPerspectiveFovRadForRaw(constants.defaultPerspectiveFovDeg) * 0.5,
-    );
+    const referenceTan = Math.tan((constants.perspectiveScaleReferenceFovDeg * Math.PI) / 360);
     const currentTan = Math.tan(getPerspectiveFovRadForRaw(rawPerspective) * 0.5);
     return safeBaseCameraZ * (referenceTan / Math.max(0.0001, currentTan));
   }
@@ -1732,7 +1782,7 @@
     const frameHeightCss =
       rect && Number.isFinite(rect.height) && rect.height > 1 ? rect.height : state.frameHeight;
     const perspectivePx = (frameHeightCss * 0.5) / Math.tan(getPerspectiveFovRad() * 0.5);
-    frame.style.perspective = `${clamp(perspectivePx, 40, 12000).toFixed(3)}px`;
+    frame.style.perspective = `${clamp(perspectivePx, 40, 1000000).toFixed(3)}px`;
   }
 
   function syncPerspectiveInputs() {
@@ -1775,12 +1825,73 @@
     ];
   }
 
+  function normalizeHexColor(value) {
+    const parsed = /^#?([0-9a-f]{6})$/i.exec(String(value || "").trim());
+    return parsed ? `#${parsed[1].toUpperCase()}` : "";
+  }
+
+  function syncBrandColorPresetGroup(group) {
+    if (!(group instanceof HTMLElement)) return;
+    const inputId = group.dataset.colorPresetsFor || "";
+    const input = document.getElementById(inputId);
+    const currentColor =
+      input instanceof HTMLInputElement ? normalizeHexColor(input.value) : "";
+    group.querySelectorAll(".brand-color-preset").forEach((button) => {
+      const isSelected =
+        normalizeHexColor(button.getAttribute("data-color-value")) === currentColor;
+      button.classList.toggle("is-selected", isSelected);
+      button.setAttribute("aria-pressed", isSelected ? "true" : "false");
+    });
+  }
+
+  function syncAllBrandColorPresetSelections() {
+    brandColorPresetGroups.forEach(syncBrandColorPresetGroup);
+  }
+
+  function applyBrandColorPreset(inputId, value) {
+    const input = document.getElementById(inputId);
+    const nextColor = normalizeHexColor(value);
+    if (!(input instanceof HTMLInputElement) || !nextColor) return;
+    input.value = nextColor.toLowerCase();
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    syncAllBrandColorPresetSelections();
+  }
+
+  function renderBrandColorPresets() {
+    brandColorPresetGroups.forEach((group) => {
+      if (!(group instanceof HTMLElement)) return;
+      const inputId = group.dataset.colorPresetsFor || "";
+      group.innerHTML = "";
+      brandColorPresets.forEach((preset) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "brand-color-preset";
+        button.style.setProperty("--preset-color", preset.value);
+        button.setAttribute("data-color-value", preset.value);
+        button.setAttribute(
+          "aria-label",
+          `Set ${inputId || "color"} to ${preset.name} ${preset.value}`,
+        );
+        button.title = `${preset.name} ${preset.value}`;
+        button.addEventListener("click", () => {
+          applyBrandColorPreset(inputId, preset.value);
+        });
+        group.appendChild(button);
+      });
+    });
+    syncAllBrandColorPresetSelections();
+  }
+
   function updateShapeColor(hex) {
     const rgb = hexToRgb01(hex);
     sphereObject.color = rgb.slice();
     frustumObject.color = rgb.slice();
     frustumLargeBaseObject.color = rgb.slice();
     const cssColor = rgb01ToCss(rgb);
+    if (frame) {
+      frame.style.setProperty("--ink-color", cssColor);
+    }
     olabColorInstances.forEach((instance) => {
       if (instance && instance.svg) {
         instance.svg.style.color = cssColor;
@@ -1796,6 +1907,7 @@
     });
     syncMode6TextEntries();
     renderMode6TextCanvas();
+    syncAllBrandColorPresetSelections();
   }
 
   function rebuildFrustumFor(lengthSvg, largeDiameterSvg) {
@@ -2293,6 +2405,7 @@
   function updateCameraUniforms() {
     const activeCameraZ = getActiveCameraZ();
     gl.uniform1f(uCameraZ, activeCameraZ);
+    gl.uniform1f(uFar, Math.max(1000, activeCameraZ + 1000));
     gl.uniform3f(uEyePos, 0, 0, activeCameraZ);
     updateFramePerspective();
   }
@@ -2375,7 +2488,7 @@
       mode5Controls.hidden = !(state.playMode === "play4" || state.playMode === "play7");
     }
     if (mode5StackToggle) {
-      const stackControl = mode5StackToggle.closest(".toggle");
+      const stackControl = mode5StackToggle.closest(".mode5-switch-layout-control");
       if (stackControl) {
         stackControl.hidden = state.playMode === "play4";
         stackControl.style.display = state.playMode === "play4" ? "none" : "";
@@ -2618,6 +2731,7 @@
     resizeMode6TextCanvas();
     updatePlay1EnvironmentVisual();
     updateFramePerspective();
+    applyFrameBackgroundImageLayout();
     refreshMode6BaseLayout();
   }
 
@@ -2641,6 +2755,161 @@
     if (frameBgColorInput && document.activeElement !== frameBgColorInput) {
       frameBgColorInput.value = next;
     }
+    syncAllBrandColorPresetSelections();
+  }
+
+  function normalizeFrameImageFit(value) {
+    return value === "fill" ? "fill" : "contain";
+  }
+
+  function normalizeFrameImageScope(value) {
+    return value === "grid" ? "grid" : "frame";
+  }
+
+  function normalizeFrameImageLayer(value) {
+    return value === "front" ? "front" : "back";
+  }
+
+  function normalizeTypeLogoPlacement(value) {
+    return [
+      "top-left",
+      "top-center",
+      "top-right",
+      "middle-left",
+      "center",
+      "middle-right",
+      "bottom-left",
+      "bottom-center",
+      "bottom-right",
+    ].includes(value)
+      ? value
+      : constants.defaultTypeLogoPlacement;
+  }
+
+  function normalizeTypeSeparateAlign(value) {
+    return value === "center" || value === "right" ? value : constants.defaultTypeSeparateAlign;
+  }
+
+  function getSeparateAlignPlacement(value) {
+    const align = normalizeTypeSeparateAlign(value);
+    if (align === "center") return "center";
+    return align === "right" ? "middle-right" : "middle-left";
+  }
+
+  function getPlacementSeparateAlign(value) {
+    if (value === "middle-left") return "left";
+    if (value === "center") return "center";
+    if (value === "middle-right") return "right";
+    return null;
+  }
+
+  function getSeparateAlignFromLogoPlacement(value) {
+    const parts = getTypeLogoPlacementParts(value);
+    if (parts.horizontal === "right") return "right";
+    if (parts.horizontal === "center") return "center";
+    return "left";
+  }
+
+  function getLogoPlacementFromSeparateAlign(value) {
+    const align = normalizeTypeSeparateAlign(value);
+    if (align === "right") return "top-right";
+    if (align === "center") return "top-center";
+    return "top-left";
+  }
+
+  function getStretchPlacementFromLogoPlacement(value) {
+    const parts = getTypeLogoPlacementParts(value);
+    if (parts.vertical === "bottom") return "bottom-center";
+    if (parts.vertical === "middle") return "center";
+    return "top-center";
+  }
+
+  function getPlacementStretchVertical(value) {
+    if (value === "top-center") return "top";
+    if (value === "center") return "middle";
+    if (value === "bottom-center") return "bottom";
+    return null;
+  }
+
+  function syncFrameImageControls() {
+    if (frameImageFitSelect && document.activeElement !== frameImageFitSelect) {
+      frameImageFitSelect.value = state.frameImageFit;
+    }
+    if (frameImageScopeSelect && document.activeElement !== frameImageScopeSelect) {
+      frameImageScopeSelect.value = state.frameImageScope;
+    }
+    if (frameImageLayerSelect && document.activeElement !== frameImageLayerSelect) {
+      frameImageLayerSelect.value = state.frameImageLayer;
+    }
+    if (clearImageButton) {
+      clearImageButton.hidden = !state.frameImageDataUrl;
+    }
+  }
+
+  function getFrameImageBounds(width, height) {
+    const safeWidth = Math.max(1, Number(width) || state.frameWidth || constants.defaultFrameWidth);
+    const safeHeight = Math.max(1, Number(height) || state.frameHeight || constants.defaultFrameHeight);
+    if (state.frameImageScope !== "grid") {
+      return { x: 0, y: 0, width: safeWidth, height: safeHeight };
+    }
+    const spacing = getEffectiveTypeGridSpacing({ width: safeWidth, height: safeHeight });
+    const margin = clamp(Number(spacing.marginCss) || 0, 0, Math.min(safeWidth, safeHeight) * 0.45);
+    return {
+      x: margin,
+      y: margin,
+      width: Math.max(1, safeWidth - margin * 2),
+      height: Math.max(1, safeHeight - margin * 2),
+    };
+  }
+
+  function getFrameImageDrawRect(width, height, imageWidth, imageHeight) {
+    const bounds = getFrameImageBounds(width, height);
+    const safeImageWidth = Math.max(1, Number(imageWidth) || 1);
+    const safeImageHeight = Math.max(1, Number(imageHeight) || 1);
+    const fit = normalizeFrameImageFit(state.frameImageFit);
+    const scale =
+      fit === "fill"
+        ? Math.max(bounds.width / safeImageWidth, bounds.height / safeImageHeight)
+        : Math.min(bounds.width / safeImageWidth, bounds.height / safeImageHeight);
+    const drawWidth = safeImageWidth * scale;
+    const drawHeight = safeImageHeight * scale;
+    return {
+      bounds,
+      x: bounds.x + (bounds.width - drawWidth) * 0.5,
+      y: bounds.y + (bounds.height - drawHeight) * 0.5,
+      width: drawWidth,
+      height: drawHeight,
+    };
+  }
+
+  function applyFrameBackgroundImageLayout() {
+    if (!frameBgImage || !frame) return;
+    const rect = frame.getBoundingClientRect();
+    const width = rect && rect.width > 1 ? rect.width : state.frameWidth;
+    const height = rect && rect.height > 1 ? rect.height : state.frameHeight;
+    const bounds = getFrameImageBounds(width, height);
+    frameBgImage.style.left = `${bounds.x}px`;
+    frameBgImage.style.top = `${bounds.y}px`;
+    frameBgImage.style.width = `${bounds.width}px`;
+    frameBgImage.style.height = `${bounds.height}px`;
+    frameBgImage.style.objectFit = state.frameImageFit === "fill" ? "cover" : "contain";
+    frame.classList.toggle("frame-image-front", state.frameImageLayer === "front");
+    syncFrameImageControls();
+  }
+
+  function setFrameImageFit(value) {
+    state.frameImageFit = normalizeFrameImageFit(value);
+    applyFrameBackgroundImageLayout();
+  }
+
+  function setFrameImageScope(value) {
+    state.frameImageScope = normalizeFrameImageScope(value);
+    applyFrameBackgroundImageLayout();
+  }
+
+  function setFrameImageLayer(value) {
+    state.frameImageLayer = normalizeFrameImageLayer(value);
+    applyFrameBackgroundImageLayout();
   }
 
   function syncTypeGridInputs() {
@@ -2651,12 +2920,53 @@
     if (typeMarkModeSelect) {
       const combinationOption = typeMarkModeSelect.querySelector('option[value="combination"]');
       if (combinationOption) {
-        combinationOption.disabled = state.typeLayout1EndColumn !== 1;
+        combinationOption.disabled = false;
       }
     }
     if (typeMarkModeSelect && document.activeElement !== typeMarkModeSelect) {
       typeMarkModeSelect.value = state.typeMarkMode;
     }
+    typeMarkModeButtons.forEach((button) => {
+      const mode = button.dataset.typeMarkMode;
+      const isSelected = mode === state.typeMarkMode;
+      button.disabled = false;
+      button.classList.toggle("is-selected", isSelected);
+      button.setAttribute("aria-pressed", isSelected ? "true" : "false");
+    });
+    const isSeparateMark = state.typeMarkMode === "separate";
+    const isStretchColumn = state.typeLayout1EndColumn === 6;
+    const isStretchMark = isStretchColumn && !isSeparateMark;
+    const isSeparateStretchLocked = isSeparateMark && isStretchColumn;
+    const canUsePlacement = state.typeLayout === "layout1";
+    if (typePlacementField) {
+      typePlacementField.hidden = !canUsePlacement;
+    }
+    if (typePlacementGrid) {
+      typePlacementGrid.hidden = !canUsePlacement;
+      typePlacementGrid.classList.toggle("is-separate-mode", isSeparateMark);
+    }
+    const selectedPlacement = isSeparateMark
+      ? isSeparateStretchLocked
+        ? "center"
+        : getSeparateAlignPlacement(state.typeSeparateAlign)
+      : isStretchMark
+      ? getStretchPlacementFromLogoPlacement(state.typeLogoPlacement)
+      : state.typeLogoPlacement;
+    typeLogoPlacementButtons.forEach((button) => {
+      const placement = button.dataset.typeLogoPlacement;
+      const isAllowed = isSeparateMark
+        ? isSeparateStretchLocked
+          ? placement === "center"
+          : !!getPlacementSeparateAlign(placement)
+        : isStretchMark
+        ? !!getPlacementStretchVertical(placement)
+        : true;
+      const isSelected = placement === selectedPlacement;
+      button.disabled = canUsePlacement && !isAllowed;
+      button.classList.toggle("is-selected", isSelected);
+      button.classList.toggle("is-unavailable", !isAllowed);
+      button.setAttribute("aria-pressed", isSelected ? "true" : "false");
+    });
     if (typeLayout1EndColInput && document.activeElement !== typeLayout1EndColInput) {
       typeLayout1EndColInput.value = String(state.typeLayout1EndColumn);
     }
@@ -2681,18 +2991,12 @@
   function getEffectiveTypeGridSpacing(rect) {
     const safeRect = rect || frame.getBoundingClientRect();
     if (state.typeLayout === "layout1") {
-      const screenMetrics =
-        safeRect.width > 1 && safeRect.height > 1
-          ? getMode5SphereScreenMetrics(safeRect, getCanonicalLayoutViewState())
-          : null;
-      if (screenMetrics) {
-        const gapCss = Math.max(0, screenMetrics.sphereDiameterCss * state.gapRatio);
-        const shortSideCss = Math.min(safeRect.width, safeRect.height);
-        return {
-          marginCss: shortSideCss / 24,
-          gutterCss: gapCss,
-        };
-      }
+      const shortSideCss = Math.min(safeRect.width, safeRect.height);
+      const spacingCss = shortSideCss / 26;
+      return {
+        marginCss: spacingCss,
+        gutterCss: spacingCss,
+      };
     }
     return {
       marginCss: Math.max(0, state.typeGridMargin),
@@ -2766,6 +3070,49 @@
 
   function getTypeTextSphereHeightCss(rect) {
     const safeRect = rect || frame.getBoundingClientRect();
+    const shapeMetrics = computeShapeProjectedMetrics();
+    const fullShapeWidthSvg =
+      constants.sphereDiameterSvg +
+      state.gapRatio * constants.sphereDiameterSvg +
+      state.frustumLengthSvg;
+    if (
+      shapeMetrics &&
+      Number.isFinite(shapeMetrics.boundsWidthPx) &&
+      shapeMetrics.boundsWidthPx > 1 &&
+      Number.isFinite(fullShapeWidthSvg) &&
+      fullShapeWidthSvg > 1
+    ) {
+      const pxToCssX = safeRect.width / Math.max(1, shapeMetrics.width);
+      const sphereRatio = constants.sphereDiameterSvg / fullShapeWidthSvg;
+      return Math.max(12, shapeMetrics.boundsWidthPx * pxToCssX * sphereRatio);
+    }
+    const width = Math.max(2, canvas.width);
+    const height = Math.max(2, canvas.height);
+    const stats = {
+      minX: Infinity,
+      maxX: -Infinity,
+      minY: Infinity,
+      maxY: -Infinity,
+      depthSum: 0,
+      count: 0,
+    };
+    accumulateProjectedStats(
+      mode5SphereCenterPositions,
+      sphereObject,
+      width,
+      height,
+      state.cameraZ,
+      1,
+      stats,
+    );
+    if (
+      stats.count >= 20 &&
+      Number.isFinite(stats.minY) &&
+      Number.isFinite(stats.maxY) &&
+      stats.maxY > stats.minY
+    ) {
+      return Math.max(12, (stats.maxY - stats.minY) * (safeRect.height / height));
+    }
     const screenMetrics =
       safeRect.width > 1 && safeRect.height > 1 ? getMode5SphereScreenMetrics(safeRect) : null;
     return Math.max(12, screenMetrics ? screenMetrics.sphereDiameterCss : 48);
@@ -2773,14 +3120,15 @@
 
   function getTypeTextFontSizeForActualHeight(targetHeightCss) {
     const target = Math.max(12, Number(targetHeightCss) || 0);
-    const measureSize = 200;
-    const svgBox = getTypeTextSvgBBox("O", measureSize, measureSize);
-    if (svgBox && Number.isFinite(svgBox.height) && svgBox.height > 1) {
-      return target * (measureSize / svgBox.height);
+    const capRatio =
+      constants.typeFontCapHeight / Math.max(1, constants.typeFontUnitsPerEm);
+    if (Number.isFinite(capRatio) && capRatio > 0.01) {
+      return target / capRatio;
     }
     if (!typeTextMeasureContext) {
       return target;
     }
+    const measureSize = 200;
     typeTextMeasureContext.font = `500 ${measureSize}px "Aeonik Fono Exact", Arial, "Helvetica Neue", sans-serif`;
     const metrics = typeTextMeasureContext.measureText("O");
     const actualHeight =
@@ -2792,46 +3140,69 @@
     return target * (measureSize / actualHeight);
   }
 
+  function typeTextLineHasDescender(line) {
+    return /[gjpqyQJ,;]/.test(String(line || ""));
+  }
+
+  function getTypeTextLineBoxMetrics(text, fontSizeCss, lineHeightCss) {
+    const safeFontSize = Math.max(1, Number(fontSizeCss) || 1);
+    const safeLineHeight = Math.max(safeFontSize, Number(lineHeightCss) || safeFontSize);
+    const units = Math.max(1, constants.typeFontUnitsPerEm);
+    const capHeightCss = safeFontSize * (constants.typeFontCapHeight / units);
+    const descenderCss = safeFontSize * (constants.typeFontDescender / units);
+    const lines = String(text || "").split(/\r?\n/);
+    const safeLines = lines.length ? lines : [""];
+    const lastLine = safeLines[safeLines.length - 1] || "";
+    const lastBaseline = Math.max(0, safeLines.length - 1) * safeLineHeight;
+    const bottom = lastBaseline + (typeTextLineHasDescender(lastLine) ? descenderCss : 0);
+    return {
+      top: -capHeightCss,
+      bottom,
+      height: Math.max(1, bottom + capHeightCss),
+    };
+  }
+
   function getTypeTextInkMetrics(text, fontSizeCss, lineHeightCss) {
     const safeFontSize = Math.max(1, Number(fontSizeCss) || 1);
     const safeLineHeight = Math.max(safeFontSize, Number(lineHeightCss) || safeFontSize);
     const svgBox = getTypeTextSvgBBox(text, safeFontSize, safeLineHeight);
+    const lineBox = getTypeTextLineBoxMetrics(text, safeFontSize, safeLineHeight);
     if (svgBox) {
       return {
         left: svgBox.x,
-        top: svgBox.y,
+        top: lineBox.top,
         width: Math.max(1, svgBox.width),
-        height: Math.max(1, svgBox.height),
-        capTop: svgBox.y,
-        descBottom: svgBox.y + svgBox.height,
+        height: lineBox.height,
+        capTop: lineBox.top,
+        descBottom: lineBox.bottom,
       };
     }
     if (!typeTextMeasureContext) {
-      return { left: 0, top: 0, width: safeFontSize, height: safeLineHeight };
+      return {
+        left: 0,
+        top: lineBox.top,
+        width: safeFontSize,
+        height: lineBox.height,
+        capTop: lineBox.top,
+        descBottom: lineBox.bottom,
+      };
     }
     typeTextMeasureContext.font = `500 ${safeFontSize}px "Aeonik Fono Exact", Arial, "Helvetica Neue", sans-serif`;
     const metrics = typeTextMeasureContext.measureText(String(text || "") || "O");
     const left = Number.isFinite(metrics.actualBoundingBoxLeft)
       ? -metrics.actualBoundingBoxLeft
       : 0;
-    const top = Number.isFinite(metrics.actualBoundingBoxAscent)
-      ? -metrics.actualBoundingBoxAscent
-      : 0;
     const width = Number.isFinite(metrics.actualBoundingBoxLeft) &&
       Number.isFinite(metrics.actualBoundingBoxRight)
       ? metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight
       : Math.max(1, metrics.width || safeFontSize);
-    const height = Number.isFinite(metrics.actualBoundingBoxAscent) &&
-      Number.isFinite(metrics.actualBoundingBoxDescent)
-      ? metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
-      : safeLineHeight;
     return {
       left,
-      top,
+      top: lineBox.top,
       width: Math.max(1, width),
-      height: Math.max(1, height),
-      capTop: top,
-      descBottom: top + height,
+      height: lineBox.height,
+      capTop: lineBox.top,
+      descBottom: lineBox.bottom,
     };
   }
 
@@ -2850,19 +3221,63 @@
   function normalizeTypeTextValue(value) {
     return String(value || "")
       .replace(/\r\n?/g, "\n")
-      .replace(/\u00a0/g, " ")
-      .replace(/\n$/, "");
+      .replace(/\u00a0/g, " ");
   }
 
   function readTypeTextContent(element) {
     if (!element) return "";
-    const raw = typeof element.innerText === "string" ? element.innerText : element.textContent || "";
+    const raw = element.textContent || "";
     return normalizeTypeTextValue(raw);
+  }
+
+  function dispatchTypeTextInput(element) {
+    if (!element) return;
+    try {
+      element.dispatchEvent(new InputEvent("input", {
+        bubbles: true,
+        inputType: "insertLineBreak",
+      }));
+    } catch (_error) {
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  }
+
+  function insertTypeTextLineBreak(element) {
+    if (!element) return false;
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount < 1) return false;
+    const range = selection.getRangeAt(0);
+    if (!element.contains(range.commonAncestorContainer)) return false;
+    range.deleteContents();
+    const lineBreak = document.createTextNode("\n");
+    range.insertNode(lineBreak);
+    range.setStartAfter(lineBreak);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    dispatchTypeTextInput(element);
+    return true;
+  }
+
+  function queueTypeTextToolbarUpdate(delay = 0) {
+    if (typeTextToolbarUpdateTimer) {
+      window.clearTimeout(typeTextToolbarUpdateTimer);
+      typeTextToolbarUpdateTimer = null;
+    }
+    if (delay > 0) {
+      typeTextToolbarUpdateTimer = window.setTimeout(() => {
+        typeTextToolbarUpdateTimer = null;
+        updateTypeTextToolbar();
+      }, delay);
+      return;
+    }
+    updateTypeTextToolbar();
   }
 
   function setActiveTypeTextBox(id) {
     state.activeTypeTextBoxId = getTypeTextBoxById(id) ? id : null;
     syncTypeTextControls();
+    updateTypeTextLayer();
   }
 
   function getActiveTypeTextBox() {
@@ -2872,11 +3287,17 @@
   function syncTypeTextControls() {
     const activeBox = getActiveTypeTextBox();
     syncTypeTextButton();
+    if (typeClearTextsButton) {
+      typeClearTextsButton.disabled = !state.typeTextBoxes.length || !canUseTypeLayoutEditing();
+    }
     if (typeTextScaleUpButton) {
       typeTextScaleUpButton.disabled = !activeBox || !canUseTypeLayoutEditing();
     }
     if (typeTextScaleDownButton) {
       typeTextScaleDownButton.disabled = !activeBox || !canUseTypeLayoutEditing();
+    }
+    if (typeTextDeleteButton) {
+      typeTextDeleteButton.disabled = !activeBox || !canUseTypeLayoutEditing();
     }
     if (typeTextAlignSelect) {
       typeTextAlignSelect.disabled = !activeBox || !canUseTypeLayoutEditing();
@@ -2884,6 +3305,32 @@
         typeTextAlignSelect.value = activeBox.align || "left";
       }
     }
+  }
+
+  function updateTypeTextToolbar() {
+    if (!typeTextToolbar || !frame) return;
+    const activeBox = getActiveTypeTextBox();
+    const entry = activeBox ? typeTextBoxElements.get(activeBox.id) : null;
+    const shouldShow =
+      canUseTypeLayoutEditing() &&
+      activeBox &&
+      entry &&
+      entry.root &&
+      !activeBox.isEditing;
+    typeTextToolbar.classList.toggle("is-visible", !!shouldShow);
+    typeTextToolbar.setAttribute("aria-hidden", shouldShow ? "false" : "true");
+    if (!shouldShow) return;
+
+    const left = parseFloat(entry.root.style.left) || 0;
+    const top = parseFloat(entry.root.style.top) || 0;
+    const width = parseFloat(entry.root.style.width) || entry.root.offsetWidth || 1;
+    const height = parseFloat(entry.root.style.height) || entry.root.offsetHeight || 1;
+    const toolbarHalfWidth = Math.max(1, typeTextToolbar.offsetWidth || 1) * 0.5;
+    const x = clamp(left + width * 0.5, toolbarHalfWidth + 4, frame.clientWidth - toolbarHalfWidth - 4);
+    const placeBelow = top < 42;
+    typeTextToolbar.classList.toggle("is-below", placeBelow);
+    typeTextToolbar.style.left = `${x}px`;
+    typeTextToolbar.style.top = `${placeBelow ? top + height : top}px`;
   }
 
   function getClosestTypeTextCorner(localX, localY, width, height) {
@@ -2936,6 +3383,7 @@
     entry.root.classList.add("is-editing");
     entry.ink.contentEditable = "true";
     entry.ink.focus();
+    updateTypeTextToolbar();
     const selection = window.getSelection();
     if (selection) {
       const range = document.createRange();
@@ -2962,6 +3410,28 @@
     updateTypeTextLayer();
   }
 
+  function deleteActiveTypeTextBox() {
+    const activeBox = getActiveTypeTextBox();
+    if (!activeBox) return;
+    state.typeTextBoxes = state.typeTextBoxes.filter((item) => item.id !== activeBox.id);
+    if (hoveredTypeTextBoxId === activeBox.id) {
+      hoveredTypeTextBoxId = null;
+    }
+    removeTypeTextBoxElement(activeBox.id);
+    state.activeTypeTextBoxId = state.typeTextBoxes.length
+      ? state.typeTextBoxes[Math.max(0, state.typeTextBoxes.length - 1)].id
+      : null;
+    updateTypeTextLayer();
+  }
+
+  function clearTypeTextBoxes() {
+    state.typeTextBoxes = [];
+    state.activeTypeTextBoxId = null;
+    hoveredTypeTextBoxId = null;
+    typeTextToolbarHover = false;
+    updateTypeTextLayer();
+  }
+
   function setActiveTypeTextAlign(value) {
     const activeBox = getActiveTypeTextBox();
     if (!activeBox) return;
@@ -2981,6 +3451,9 @@
     if (state.activeTypeTextBoxId === id) {
       state.activeTypeTextBoxId = null;
       syncTypeTextControls();
+    }
+    if (hoveredTypeTextBoxId === id) {
+      hoveredTypeTextBoxId = null;
     }
   }
 
@@ -3022,6 +3495,7 @@
       if (event.button !== 0) return;
       const target = getTypeTextBoxById(item.id);
       if (!target) return;
+      hoveredTypeTextBoxId = item.id;
       const rootRect = root.getBoundingClientRect();
       const localX = event.clientX - rootRect.left;
       const localY = event.clientY - rootRect.top;
@@ -3032,6 +3506,9 @@
           startClientX: event.clientX,
           startClientY: event.clientY,
           active: false,
+          targetId: item.id,
+          duplicateOnDrag: event.altKey || typeTextAltPressed,
+          duplicated: false,
           pendingAnchorCorner: localY <= rootRect.height * 0.5 ? "tl" : "bl",
         };
       } else {
@@ -3041,6 +3518,9 @@
           startClientX: event.clientX,
           startClientY: event.clientY,
           active: false,
+          targetId: item.id,
+          duplicateOnDrag: event.altKey || typeTextAltPressed,
+          duplicated: false,
           pendingAnchorCorner: getClosestTypeTextCorner(
             localX,
             localY,
@@ -3053,11 +3533,27 @@
       root.setPointerCapture(event.pointerId);
     });
 
+    root.addEventListener("pointerenter", () => {
+      hoveredTypeTextBoxId = item.id;
+      queueTypeTextToolbarUpdate();
+    });
+
+    root.addEventListener("pointerleave", (event) => {
+      const relatedTarget = event.relatedTarget instanceof Node ? event.relatedTarget : null;
+      if (typeTextToolbar && relatedTarget && typeTextToolbar.contains(relatedTarget)) {
+        return;
+      }
+      if (hoveredTypeTextBoxId === item.id) {
+        hoveredTypeTextBoxId = null;
+      }
+      queueTypeTextToolbarUpdate(120);
+    });
+
     root.addEventListener("pointermove", (event) => {
       if (!typeTextDrag || typeTextDrag.id !== item.id || typeTextDrag.pointerId !== event.pointerId) {
         return;
       }
-      const target = getTypeTextBoxById(item.id);
+      let target = getTypeTextBoxById(typeTextDrag.targetId || item.id);
       if (!target) return;
       if (!typeTextDrag.active) {
         const moved = Math.hypot(
@@ -3067,9 +3563,23 @@
         if (moved < 4) {
           return;
         }
+        if (!typeTextDrag.duplicated && (typeTextDrag.duplicateOnDrag || event.altKey || typeTextAltPressed)) {
+          const clone = {
+            ...target,
+            id: `type-text-${nextTypeTextBoxId++}`,
+            isEditing: false,
+          };
+          state.typeTextBoxes.push(clone);
+          typeTextDrag.targetId = clone.id;
+          typeTextDrag.duplicated = true;
+          target = clone;
+          setActiveTypeTextBox(clone.id);
+        }
         typeTextDrag.active = true;
         target.anchorCorner = typeTextDrag.pendingAnchorCorner || target.anchorCorner || "tl";
-        root.classList.add("is-dragging");
+        if (!typeTextDrag.duplicated) {
+          root.classList.add("is-dragging");
+        }
       }
       const rect = frame.getBoundingClientRect();
       const gridMetrics = getTypeGridSnapMetrics(rect);
@@ -3080,6 +3590,10 @@
       }
       target.yLine = findNearestSnapIndex(gridMetrics.yLines, localY);
       updateTypeTextLayer();
+      const targetEntry = typeTextBoxElements.get(target.id);
+      if (targetEntry && targetEntry.root) {
+        targetEntry.root.classList.add("is-dragging");
+      }
     });
 
     const endDrag = (event) => {
@@ -3090,8 +3604,13 @@
       if (event && root.hasPointerCapture(event.pointerId)) {
         root.releasePointerCapture(event.pointerId);
       }
+      const targetEntry = typeTextBoxElements.get(typeTextDrag.targetId || item.id);
       typeTextDrag = null;
       root.classList.remove("is-dragging");
+      if (targetEntry && targetEntry.root) {
+        targetEntry.root.classList.remove("is-dragging");
+      }
+      queueTypeTextToolbarUpdate(120);
     };
 
     root.addEventListener("pointerup", endDrag);
@@ -3109,6 +3628,18 @@
       if (!target) return;
       target.text = readTypeTextContent(ink);
       updateTypeTextLayer();
+    });
+
+    ink.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || event.metaKey || event.ctrlKey || event.altKey) return;
+      event.preventDefault();
+      if (!insertTypeTextLineBreak(ink)) {
+        const target = getTypeTextBoxById(item.id);
+        if (!target) return;
+        target.text = `${normalizeTypeTextValue(target.text)}\n`;
+        ink.textContent = target.text;
+        updateTypeTextLayer();
+      }
     });
 
     ink.addEventListener("focus", () => {
@@ -3150,6 +3681,7 @@
     }
 
     if (!active) {
+      updateTypeTextToolbar();
       return;
     }
 
@@ -3169,7 +3701,10 @@
       const targetLeftCss = gridMetrics.xLines[item.xLine] || gridMetrics.marginCss;
       const targetTopCss = gridMetrics.yLines[item.yLine] || gridMetrics.marginCss;
       const scaleMultiplier = Math.max(0.125, Number(item.scaleMultiplier) || 1);
-      const actualFontSizeCss = getTypeTextFontSizeForActualHeight(sphereHeightCss) * scaleMultiplier;
+      const actualFontSizeCss =
+        getTypeTextFontSizeForActualHeight(
+          sphereHeightCss * constants.typeTextSphereHeightRatio,
+        ) * scaleMultiplier;
       const lineHeightCss = actualFontSizeCss;
       const inkMetrics = getTypeTextInkMetrics(item.text, actualFontSizeCss, lineHeightCss);
       const visibleWidth = Math.max(1, inkMetrics.width);
@@ -3215,6 +3750,7 @@
       entry.ink.style.width = `${visibleWidth}px`;
       entry.ink.style.height = `${visibleHeight}px`;
     }
+    updateTypeTextToolbar();
   }
 
   function addTypeTextBox() {
@@ -3281,6 +3817,7 @@
     renderTypeGridColumns();
     renderTypeGridRows();
     syncTypeGridInputs();
+    applyFrameBackgroundImageLayout();
     updateTypeTextLayer();
   }
 
@@ -3302,20 +3839,40 @@
     }
     updateTypographyShapeVisibility();
     syncTypeGridInputs();
+    applyTypographyLayout();
+    updateTypographyOlabLockup();
   }
 
   function setTypeMarkMode(value) {
-    if (state.typeLayout1EndColumn !== 1) {
-      state.typeMarkMode =
-        value === "separate" || value === "wordmark" ? value : "icon";
-    } else {
-      state.typeMarkMode =
-        value === "combination" || value === "separate" || value === "wordmark"
-          ? value
-          : "icon";
+    const previousMode = state.typeMarkMode;
+    const nextMode =
+      value === "combination" || value === "separate" || value === "wordmark"
+        ? value
+        : "icon";
+    if (previousMode !== "separate" && nextMode === "separate") {
+      state.typeSeparateAlign = getSeparateAlignFromLogoPlacement(state.typeLogoPlacement);
+    } else if (previousMode === "separate" && nextMode !== "separate") {
+      state.typeLogoPlacement = getLogoPlacementFromSeparateAlign(state.typeSeparateAlign);
     }
+    state.typeMarkMode = nextMode;
     updateTypographyShapeVisibility();
     syncTypeGridInputs();
+    applyTypographyLayout();
+    updateTypographyOlabLockup();
+  }
+
+  function setTypeLogoPlacement(value) {
+    state.typeLogoPlacement = normalizeTypeLogoPlacement(value);
+    syncTypeGridInputs();
+    applyTypographyLayout();
+    updateTypographyOlabLockup();
+  }
+
+  function setTypeSeparateAlign(value) {
+    state.typeSeparateAlign = normalizeTypeSeparateAlign(value);
+    syncTypeGridInputs();
+    applyTypographyLayout();
+    updateTypographyOlabLockup();
   }
 
   function setTypeLayout1EndColumn(value) {
@@ -3325,10 +3882,9 @@
         ? raw
         : constants.defaultTypeLayout1EndColumn;
     state.typeLayout1EndColumn = next;
-    if (next !== 1 && state.typeMarkMode === "combination") {
-      state.typeMarkMode = "icon";
-    }
     syncTypeGridInputs();
+    applyTypographyLayout();
+    updateTypographyOlabLockup();
   }
 
   function updateTypographyShapeVisibility() {
@@ -3385,15 +3941,36 @@
     applyTypeGridState();
   }
 
-  function applyTypographyLayout() {
-    if (state.playMode !== "off") return;
-    if (state.typeLayout !== "layout1") return;
-    const rect = frame.getBoundingClientRect();
-    const metrics = computeShapeProjectedMetrics();
-    if (!metrics) return;
+  function getTypographyAxisStart(position, start, size, itemSize) {
+    const safeStart = Number(start) || 0;
+    const safeSize = Math.max(0, Number(size) || 0);
+    const safeItemSize = Math.max(0, Number(itemSize) || 0);
+    if (position === "center" || position === "middle") {
+      return safeStart + (safeSize - safeItemSize) * 0.5;
+    }
+    if (position === "right" || position === "bottom") {
+      return safeStart + safeSize - safeItemSize;
+    }
+    return safeStart;
+  }
+
+  function getTypeLogoPlacementParts(value) {
+    const placement = normalizeTypeLogoPlacement(value);
+    if (placement === "center") {
+      return { horizontal: "center", vertical: "middle" };
+    }
+    const parts = placement.split("-");
+    return {
+      vertical: parts[0] || "top",
+      horizontal: parts[1] || "left",
+    };
+  }
+
+  function getTypographyLayoutGeometry(rect, metrics) {
+    if (!rect || !metrics) return null;
+    const effectiveGridSpacing = getEffectiveTypeGridSpacing(rect);
     const totalColumns = Math.max(1, Math.min(6, state.typeGridColumns));
     const endColumn = clamp(state.typeLayout1EndColumn, 1, totalColumns);
-    let effectiveGridSpacing = getEffectiveTypeGridSpacing(rect);
     const availableCssWidth =
       rect.width -
       effectiveGridSpacing.marginCss * 2 -
@@ -3402,23 +3979,120 @@
     const targetWidthCss =
       columnWidthCss * endColumn +
       effectiveGridSpacing.gutterCss * Math.max(0, endColumn - 1);
-    const targetWidthPx = targetWidthCss * (metrics.width / Math.max(1, rect.width));
+    const pxToCssX = rect.width / Math.max(1, metrics.width);
+    const pxToCssY = rect.height / Math.max(1, metrics.height);
+    const shapeWidthCss = metrics.boundsWidthPx * pxToCssX;
+    const shapeHeightCss = metrics.boundsHeightPx * pxToCssY;
+    const wordmarkWidthCss =
+      state.typeMarkMode === "wordmark" ? targetWidthCss : shapeWidthCss;
+    const wordmarkHeightCss =
+      wordmarkWidthCss * (constants.mode5OlabViewHeightSvg / constants.mode5OlabViewWidthSvg);
+    const gapCss = wordmarkWidthCss * constants.typeCombinationGapWidthRatio;
+    const contentLeftCss = effectiveGridSpacing.marginCss;
+    const contentTopCss = effectiveGridSpacing.marginCss;
+    const contentWidthCss = Math.max(1, rect.width - effectiveGridSpacing.marginCss * 2);
+    const contentHeightCss = Math.max(1, rect.height - effectiveGridSpacing.marginCss * 2);
+    const isStretch = state.typeLayout1EndColumn === 6;
+    const placement =
+      isStretch && state.typeMarkMode !== "separate"
+        ? getTypeLogoPlacementParts(getStretchPlacementFromLogoPlacement(state.typeLogoPlacement))
+        : getTypeLogoPlacementParts(state.typeLogoPlacement);
+
+    let shapeLeftCss = contentLeftCss;
+    let shapeTopCss = contentTopCss;
+    let wordmarkLeftCss = contentLeftCss;
+    let wordmarkTopCss = contentTopCss;
+
+    if (state.typeMarkMode === "separate") {
+      const align = isStretch ? "center" : normalizeTypeSeparateAlign(state.typeSeparateAlign);
+      shapeLeftCss = getTypographyAxisStart(
+        align,
+        contentLeftCss,
+        contentWidthCss,
+        shapeWidthCss,
+      );
+      shapeTopCss = contentTopCss;
+      wordmarkLeftCss = getTypographyAxisStart(
+        align,
+        contentLeftCss,
+        contentWidthCss,
+        wordmarkWidthCss,
+      );
+      wordmarkTopCss = contentTopCss + contentHeightCss - wordmarkHeightCss;
+    } else {
+      const groupWidthCss =
+        state.typeMarkMode === "wordmark"
+          ? wordmarkWidthCss
+          : Math.max(shapeWidthCss, wordmarkWidthCss);
+      const groupHeightCss =
+        state.typeMarkMode === "combination"
+          ? shapeHeightCss + gapCss + wordmarkHeightCss
+          : state.typeMarkMode === "wordmark"
+          ? wordmarkHeightCss
+          : shapeHeightCss;
+      const groupLeftCss = getTypographyAxisStart(
+        placement.horizontal,
+        contentLeftCss,
+        contentWidthCss,
+        groupWidthCss,
+      );
+      const groupTopCss = getTypographyAxisStart(
+        placement.vertical,
+        contentTopCss,
+        contentHeightCss,
+        groupHeightCss,
+      );
+      shapeLeftCss = groupLeftCss + Math.max(0, groupWidthCss - shapeWidthCss) * 0.5;
+      shapeTopCss = groupTopCss;
+      wordmarkLeftCss = groupLeftCss + Math.max(0, groupWidthCss - wordmarkWidthCss) * 0.5;
+      wordmarkTopCss =
+        state.typeMarkMode === "combination"
+          ? groupTopCss + shapeHeightCss + gapCss
+          : groupTopCss;
+    }
+
+    return {
+      effectiveGridSpacing,
+      targetWidthCss,
+      pxToCssX,
+      pxToCssY,
+      shapeWidthCss,
+      shapeHeightCss,
+      wordmarkWidthCss,
+      wordmarkHeightCss,
+      gapCss,
+      shapeLeftCss,
+      shapeTopCss,
+      wordmarkLeftCss,
+      wordmarkTopCss,
+    };
+  }
+
+  function applyTypographyLayout() {
+    if (state.playMode !== "off") return;
+    if (state.typeLayout !== "layout1") return;
+    const rect = frame.getBoundingClientRect();
+    const metrics = computeShapeProjectedMetrics();
+    if (!metrics) return;
+    const initialGeometry = getTypographyLayoutGeometry(rect, metrics);
+    if (!initialGeometry) return;
+    const targetWidthPx = initialGeometry.targetWidthCss * (metrics.width / Math.max(1, rect.width));
     if (targetWidthPx > 1 && Number.isFinite(targetWidthPx)) {
       const widthRatio = metrics.boundsWidthPx / targetWidthPx;
       if (Math.abs(1 - widthRatio) > 0.002) {
         setCameraZoom(state.cameraZ * widthRatio);
       }
     }
-    effectiveGridSpacing = getEffectiveTypeGridSpacing(rect);
     const refreshedMetrics = computeShapeProjectedMetrics();
     if (!refreshedMetrics) return;
-    const insetCss = effectiveGridSpacing.marginCss;
+    const geometry = getTypographyLayoutGeometry(rect, refreshedMetrics);
+    if (!geometry) return;
     const cssToCanvasX = refreshedMetrics.width / Math.max(1, rect.width);
     const cssToCanvasY = refreshedMetrics.height / Math.max(1, rect.height);
-    const targetLeftPx = insetCss * cssToCanvasX;
-    const targetTopPx = insetCss * cssToCanvasY;
-    const targetCenterX = targetLeftPx + refreshedMetrics.boundsWidthPx * 0.5;
-    const targetCenterY = targetTopPx + refreshedMetrics.boundsHeightPx * 0.5;
+    const targetCenterX =
+      geometry.shapeLeftCss * cssToCanvasX + refreshedMetrics.boundsWidthPx * 0.5;
+    const targetCenterY =
+      geometry.shapeTopCss * cssToCanvasY + refreshedMetrics.boundsHeightPx * 0.5;
     const offset = computeShapeProjectedOffsetWorld(targetCenterX, targetCenterY, refreshedMetrics);
     stage.pos[0] += offset.x;
     stage.pos[1] += offset.y;
@@ -3491,42 +4165,19 @@
       return;
     }
     const rect = frame.getBoundingClientRect();
-    const effectiveGridSpacing = getEffectiveTypeGridSpacing(rect);
-    const totalColumns = Math.max(1, Math.min(6, state.typeGridColumns));
-    const endColumn = clamp(state.typeLayout1EndColumn, 1, totalColumns);
-    const availableCssWidth =
-      rect.width -
-      effectiveGridSpacing.marginCss * 2 -
-      effectiveGridSpacing.gutterCss * (totalColumns - 1);
-    const columnWidthCss = Math.max(1, availableCssWidth / totalColumns);
-    const targetWidthCss =
-      columnWidthCss * endColumn +
-      effectiveGridSpacing.gutterCss * Math.max(0, endColumn - 1);
-    const pxToCssX = rect.width / Math.max(1, metrics.width);
-    const pxToCssY = rect.height / Math.max(1, metrics.height);
-    const leftCss =
-      state.typeMarkMode === "wordmark" ? effectiveGridSpacing.marginCss : metrics.minX * pxToCssX;
-    const topCss =
-      state.typeMarkMode === "wordmark" ? effectiveGridSpacing.marginCss : metrics.maxY * pxToCssY;
-    const widthCss =
-      state.typeMarkMode === "wordmark" ? targetWidthCss : metrics.boundsWidthPx * pxToCssX;
-    const heightCss =
-      widthCss * (constants.mode5OlabViewHeightSvg / constants.mode5OlabViewWidthSvg);
-    const gapCss = widthCss * constants.typeCombinationGapWidthRatio;
-    const targetTopCss =
-      state.typeMarkMode === "wordmark"
-        ? topCss
-        : state.typeMarkMode === "separate"
-        ? Math.max(
-            effectiveGridSpacing.marginCss,
-            rect.height - effectiveGridSpacing.marginCss - heightCss,
-          )
-        : topCss + gapCss;
+    const geometry = getTypographyLayoutGeometry(rect, metrics);
+    if (!geometry) {
+      typeOlabInstance.wrap.style.display = "none";
+      typeOlabInstance.wrap.setAttribute("aria-hidden", "true");
+      return;
+    }
+    const widthCss = geometry.wordmarkWidthCss;
+    const heightCss = geometry.wordmarkHeightCss;
     const olabCenterX = (constants.mode5OlabOCenterXSvg / constants.mode5OlabViewWidthSvg) * widthCss;
     const olabCenterY = (constants.mode5OlabOCenterYSvg / constants.mode5OlabViewHeightSvg) * heightCss;
 
-    typeOlabInstance.wrap.style.left = `${leftCss}px`;
-    typeOlabInstance.wrap.style.top = `${targetTopCss}px`;
+    typeOlabInstance.wrap.style.left = `${geometry.wordmarkLeftCss}px`;
+    typeOlabInstance.wrap.style.top = `${geometry.wordmarkTopCss}px`;
     typeOlabInstance.wrap.style.width = `${widthCss}px`;
     typeOlabInstance.wrap.style.height = `${heightCss}px`;
     typeOlabInstance.wrap.style.transformOrigin = `${olabCenterX}px ${olabCenterY}px`;
@@ -3536,6 +4187,15 @@
     typeOlabInstance.wrap.setAttribute("aria-hidden", "false");
   }
 
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(reader.error || new Error("File read failed."));
+      reader.readAsDataURL(file);
+    });
+  }
+
   let frameImageObjectUrl = null;
 
   function clearFrameImage(keepInputValue) {
@@ -3543,23 +4203,34 @@
       URL.revokeObjectURL(frameImageObjectUrl);
       frameImageObjectUrl = null;
     }
+    state.frameImageDataUrl = "";
+    state.frameImageName = "";
     frameBgImage.removeAttribute("src");
     frame.classList.remove("has-image");
+    applyFrameBackgroundImageLayout();
     if (!keepInputValue) {
       frameImageInput.value = "";
     }
   }
 
-  function setFrameImageFromFile(file) {
-    if (!file || !String(file.type || "").startsWith("image/")) return false;
-    const objectUrl = URL.createObjectURL(file);
+  function setFrameImageFromSource(src, name = "Image") {
+    if (!src) return false;
     if (frameImageObjectUrl) {
       URL.revokeObjectURL(frameImageObjectUrl);
+      frameImageObjectUrl = null;
     }
-    frameImageObjectUrl = objectUrl;
-    frameBgImage.src = objectUrl;
+    state.frameImageDataUrl = src;
+    state.frameImageName = String(name || "Image");
+    frameBgImage.src = src;
     frame.classList.add("has-image");
+    applyFrameBackgroundImageLayout();
     return true;
+  }
+
+  async function setFrameImageFromFile(file) {
+    if (!file || !String(file.type || "").startsWith("image/")) return false;
+    const dataUrl = await fileToDataUrl(file);
+    return setFrameImageFromSource(dataUrl, file.name || "Image");
   }
 
   let playMode4TextureIndex = 0;
@@ -3703,51 +4374,61 @@
     });
   }
 
-  async function createMode6ImageSegmentFromFile(file) {
-    if (!file || !String(file.type || "").startsWith("image/")) return null;
-    const objectUrl = URL.createObjectURL(file);
+  async function createMode6ImageSegmentFromSource(src, name = "Image") {
+    if (!src) return null;
     try {
-      const image = await loadImageFromObjectUrl(objectUrl);
+      const image = await loadImageFromObjectUrl(src);
       return {
         type: "image",
-        name: String(file.name || "Image"),
-        src: objectUrl,
+        name: String(name || "Image"),
+        src,
+        dataUrl: src,
         image,
         width: Math.max(1, Number(image.naturalWidth) || Number(image.width) || 1),
         height: Math.max(1, Number(image.naturalHeight) || Number(image.height) || 1),
       };
     } catch (error) {
-      URL.revokeObjectURL(objectUrl);
       throw error;
     }
+  }
+
+  async function createMode6ImageSegmentFromFile(file) {
+    if (!file || !String(file.type || "").startsWith("image/")) return null;
+    const dataUrl = await fileToDataUrl(file);
+    return createMode6ImageSegmentFromSource(dataUrl, String(file.name || "Image"));
   }
 
   applyPlay1EnvironmentSource(playMode1.environmentUrl).catch(() => {
     clearPlay1EnvironmentResources();
   });
 
-  async function createPlayMode4ImageEntry(file) {
-    if (!file || !String(file.type || "").startsWith("image/")) return null;
-    const objectUrl = URL.createObjectURL(file);
+  async function createPlayMode4ImageEntryFromSource(src, name = "image") {
+    if (!src) return null;
     try {
-      const image = await loadImageFromObjectUrl(objectUrl);
+      const image = await loadImageFromObjectUrl(src);
       return {
         texture: createTextureFromImage(image),
-        url: objectUrl,
-        name: String(file.name || "image"),
+        url: src,
+        dataUrl: src,
+        name: String(name || "image"),
         width: Math.max(1, Number(image.naturalWidth) || Number(image.width) || 1),
         height: Math.max(1, Number(image.naturalHeight) || Number(image.height) || 1),
       };
     } catch (error) {
-      URL.revokeObjectURL(objectUrl);
       return null;
     }
+  }
+
+  async function createPlayMode4ImageEntry(file) {
+    if (!file || !String(file.type || "").startsWith("image/")) return null;
+    const dataUrl = await fileToDataUrl(file);
+    return createPlayMode4ImageEntryFromSource(dataUrl, String(file.name || "image"));
   }
 
   function disposePlayMode4ImageEntry(entry) {
     if (!entry) return;
     if (entry.texture) gl.deleteTexture(entry.texture);
-    if (entry.url) URL.revokeObjectURL(entry.url);
+    if (entry.url && String(entry.url).startsWith("blob:")) URL.revokeObjectURL(entry.url);
   }
 
   async function appendPlayMode4Images(fileList) {
@@ -3936,6 +4617,450 @@
   let mode6PositionDrag = null;
   let pendingMode6ImageSegmentIndex = -1;
 
+  function readSavedPresets() {
+    try {
+      const raw = localStorage.getItem(constants.presetStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_error) {
+      return [];
+    }
+  }
+
+  function writeSavedPresets(presets) {
+    try {
+      localStorage.setItem(constants.presetStorageKey, JSON.stringify(presets));
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function serializeTypeTextBoxes() {
+    return state.typeTextBoxes.map((box) => ({
+      text: String(box.text || ""),
+      xLine: Math.round(Number(box.xLine) || 0),
+      yLine: Math.round(Number(box.yLine) || 0),
+      anchorCorner: box.anchorCorner || "tl",
+      scaleMultiplier: Number(box.scaleMultiplier) || 1,
+      align: box.align === "center" ? "center" : "left",
+    }));
+  }
+
+  function serializeMode6Segment(segment) {
+    const normalized = normalizeMode6Segment(segment);
+    if (normalized.type === "image") {
+      const src = normalized.dataUrl || normalized.src || "";
+      return {
+        type: "image",
+        name: normalized.name || "Image",
+        src: String(src).startsWith("data:") ? src : "",
+        width: normalized.width,
+        height: normalized.height,
+      };
+    }
+    return { type: "text", text: normalized.text };
+  }
+
+  function serializeMode6PositionOverrides() {
+    return playMode6.positionOverrides.map((coords) =>
+      coords
+        ? {
+            x: Number(coords.x) || 0,
+            y: Number(coords.y) || 0,
+          }
+        : null,
+    );
+  }
+
+  function createStudioPresetRecord(name) {
+    const safeName = String(name || "").trim() || "Untitled preset";
+    return {
+      id: `preset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: safeName,
+      savedAt: new Date().toISOString(),
+      version: 1,
+      data: {
+        frame: {
+          width: state.frameWidth,
+          height: state.frameHeight,
+          preset: state.framePreset,
+          backgroundColor: state.frameBgColor,
+          imageFit: state.frameImageFit,
+          imageScope: state.frameImageScope,
+          imageLayer: state.frameImageLayer,
+          image: state.frameImageDataUrl
+            ? {
+                name: state.frameImageName || "Image",
+                src: state.frameImageDataUrl,
+              }
+            : null,
+        },
+        appearance: {
+          inkColor: shapeColorInput ? shapeColorInput.value : constants.defaultColorHex,
+          shadingMode: state.shadingMode,
+          depthBlur: state.depthBlur,
+          depthDynamic: state.depthDynamic,
+        },
+        layout: {
+          typeGridVisible: state.typeGridVisible,
+          typeLayout: state.typeLayout,
+          typeMarkMode: state.typeMarkMode,
+          typeLogoPlacement: state.typeLogoPlacement,
+          typeSeparateAlign: state.typeSeparateAlign,
+          typeLayout1EndColumn: state.typeLayout1EndColumn,
+          typeGridColumns: state.typeGridColumns,
+          typeGridMargin: state.typeGridMargin,
+          typeGridGutter: state.typeGridGutter,
+          typeGridBaseline: state.typeGridBaseline,
+          textBoxes: serializeTypeTextBoxes(),
+        },
+        geometry: {
+          frustumLengthSvg: state.frustumLengthSvg,
+          frustumLargeDiameterSvg: state.frustumLargeDiameterSvg,
+          gapRatio: state.gapRatio,
+          lockProportion: state.lockProportion,
+          lockedRatio: state.lockedRatio,
+        },
+        camera: {
+          cameraZ: state.cameraZ,
+          perspectiveFovDeg: state.perspectiveFovDeg,
+          stagePos: stage.pos.slice(),
+          stageRot: {
+            x: stage.rotX,
+            y: stage.rotY,
+            z: stage.rotZ,
+          },
+        },
+        motion: {
+          playMode: state.playMode,
+          play1: {
+            environmentEnabled: playMode1.environmentEnabled,
+            environmentUrl: String(playMode1.environmentUrl || "").startsWith("data:")
+              ? playMode1.environmentUrl
+              : "",
+          },
+          mode4: {
+            expandedLengthSvg: playMode4.expandedLengthSvg,
+            zoomOutExtra: playMode4.zoomOutExtra,
+            easeAmount: playMode4.easeAmount,
+            imageMode: playMode4.imageMode,
+            textureIndex: playMode4TextureIndex,
+            images: playMode4Images
+              .map((image) => ({
+                name: image.name || "image",
+                src: image.dataUrl || (String(image.url || "").startsWith("data:") ? image.url : ""),
+                width: image.width,
+                height: image.height,
+              }))
+              .filter((image) => image.src),
+          },
+          mode5: {
+            centerMode: playMode5.centerMode,
+            stackMode: playMode5.stackMode,
+            shapeSpinMs: playMode5.shapeSpinMs,
+            shapeHoldMs: playMode5.shapeHoldMs,
+          },
+          mode6: {
+            texts: playMode6.texts.map(serializeMode6Segment),
+            positionOverrides: serializeMode6PositionOverrides(),
+            distributionMode: playMode6.distributionMode,
+            sphereRadiusScale: playMode6.sphereRadiusScale,
+            holdMs: playMode6.holdMs,
+            transitionMs: playMode6.transitionMs,
+            driftHold: playMode6.driftHold,
+            fillTextSize: playMode6.fillTextSize,
+          },
+        },
+      },
+    };
+  }
+
+  function syncPresetControls() {
+    const presets = readSavedPresets();
+    if (presetSelect) {
+      const previousValue = presetSelect.value;
+      presetSelect.innerHTML = "";
+      if (!presets.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "No saved presets";
+        presetSelect.appendChild(option);
+      } else {
+        presets.forEach((preset) => {
+          const option = document.createElement("option");
+          option.value = preset.id;
+          const date = preset.savedAt ? new Date(preset.savedAt) : null;
+          const dateLabel = date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString() : "";
+          option.textContent = dateLabel ? `${preset.name} · ${dateLabel}` : preset.name;
+          presetSelect.appendChild(option);
+        });
+        if (presets.some((preset) => preset.id === previousValue)) {
+          presetSelect.value = previousValue;
+        }
+      }
+    }
+    const hasSelection = !!(presetSelect && presetSelect.value);
+    if (loadPresetButton) loadPresetButton.disabled = !hasSelection;
+    if (deletePresetButton) deletePresetButton.disabled = !hasSelection;
+  }
+
+  function saveCurrentPreset() {
+    const presets = readSavedPresets();
+    const record = createStudioPresetRecord(presetNameInput ? presetNameInput.value : "");
+    presets.unshift(record);
+    const ok = writeSavedPresets(presets);
+    if (!ok) {
+      copyStatus.textContent = "Preset save failed. The images may be too large for browser storage.";
+      return;
+    }
+    if (presetNameInput) presetNameInput.value = record.name;
+    syncPresetControls();
+    if (presetSelect) presetSelect.value = record.id;
+    syncPresetControls();
+    copyStatus.textContent = `Preset saved: ${record.name}.`;
+  }
+
+  async function hydrateMode6Segments(segments) {
+    const sourceSegments = Array.isArray(segments) ? segments : constants.defaultMode6Texts;
+    const hydrated = [];
+    for (const segment of sourceSegments) {
+      if (segment && segment.type === "image" && segment.src) {
+        const imageSegment = await createMode6ImageSegmentFromSource(
+          segment.src,
+          segment.name || "Image",
+        ).catch(() => null);
+        if (imageSegment) {
+          hydrated.push(imageSegment);
+          continue;
+        }
+      }
+      hydrated.push(normalizeMode6Segment(segment));
+    }
+    return hydrated;
+  }
+
+  function applyTypeTextBoxesFromPreset(textBoxes) {
+    state.typeTextBoxes = Array.isArray(textBoxes)
+      ? textBoxes.map((box) => ({
+          id: `type-text-${nextTypeTextBoxId++}`,
+          text: String(box && box.text != null ? box.text : "Text"),
+          xLine: Math.round(Number(box && box.xLine) || 0),
+          yLine: Math.round(Number(box && box.yLine) || 0),
+          anchorCorner: box && box.anchorCorner ? box.anchorCorner : "tl",
+          scaleMultiplier: clamp(Number(box && box.scaleMultiplier) || 1, 0.125, 64),
+          align: box && box.align === "center" ? "center" : "left",
+          isEditing: false,
+        }))
+      : [];
+    state.activeTypeTextBoxId = null;
+  }
+
+  async function applyStudioPreset(record) {
+    const data = record && record.data ? record.data : null;
+    if (!data) return false;
+    const frameData = data.frame || {};
+    const appearanceData = data.appearance || {};
+    const layoutData = data.layout || {};
+    const geometryData = data.geometry || {};
+    const cameraData = data.camera || {};
+    const motionData = data.motion || {};
+
+    typeTextDrag = null;
+    clearFrameImage(true);
+    clearPlayMode4Images(true);
+
+    state.frameImageFit = normalizeFrameImageFit(frameData.imageFit);
+    state.frameImageScope = normalizeFrameImageScope(frameData.imageScope);
+    state.frameImageLayer = normalizeFrameImageLayer(frameData.imageLayer);
+    applyFrameSize(
+      Number(frameData.width) || constants.defaultFrameWidth,
+      Number(frameData.height) || constants.defaultFrameHeight,
+    );
+    applyFrameBackgroundColor(frameData.backgroundColor || constants.defaultFrameBgColor);
+    if (frameData.image && frameData.image.src) {
+      setFrameImageFromSource(frameData.image.src, frameData.image.name || "Image");
+    }
+
+    const inkColor = normalizeHexColor(appearanceData.inkColor || constants.defaultColorHex);
+    if (shapeColorInput && inkColor) shapeColorInput.value = inkColor.toLowerCase();
+    updateShapeColor(inkColor || constants.defaultColorHex);
+    state.depthBlur = !!appearanceData.depthBlur;
+    state.depthDynamic = !!appearanceData.depthDynamic;
+    const renderMode = appearanceData.shadingMode || "flat";
+    if (shadingModeSelect) shadingModeSelect.value = renderMode;
+    updateShadingMode(renderMode);
+
+    state.typeGridVisible = layoutData.typeGridVisible !== false;
+    state.typeLayout = layoutData.typeLayout === "free" ? "free" : "layout1";
+    state.typeMarkMode =
+      layoutData.typeMarkMode === "combination" ||
+      layoutData.typeMarkMode === "separate" ||
+      layoutData.typeMarkMode === "wordmark"
+        ? layoutData.typeMarkMode
+        : "icon";
+    state.typeLogoPlacement = normalizeTypeLogoPlacement(layoutData.typeLogoPlacement);
+    state.typeSeparateAlign = normalizeTypeSeparateAlign(layoutData.typeSeparateAlign);
+    state.typeLayout1EndColumn = [1, 2, 3, 6].includes(Number(layoutData.typeLayout1EndColumn))
+      ? Number(layoutData.typeLayout1EndColumn)
+      : constants.defaultTypeLayout1EndColumn;
+    state.typeGridColumns = clamp(
+      Math.round(Number(layoutData.typeGridColumns) || constants.defaultTypeGridColumns),
+      constants.minTypeGridColumns,
+      constants.maxTypeGridColumns,
+    );
+    state.typeGridMargin = clamp(
+      Number(layoutData.typeGridMargin) || constants.defaultTypeGridMargin,
+      constants.minTypeGridMargin,
+      constants.maxTypeGridMargin,
+    );
+    state.typeGridGutter = clamp(
+      Number(layoutData.typeGridGutter) || constants.defaultTypeGridGutter,
+      constants.minTypeGridGutter,
+      constants.maxTypeGridGutter,
+    );
+    state.typeGridBaseline = constants.defaultTypeGridBaseline;
+    applyTypeTextBoxesFromPreset(layoutData.textBoxes);
+
+    state.frustumLengthSvg = clamp(
+      Number(geometryData.frustumLengthSvg) || constants.defaultFrustumLengthSvg,
+      constants.minLengthSvg,
+      constants.maxLengthSvg,
+    );
+    state.frustumLargeDiameterSvg = clamp(
+      Number(geometryData.frustumLargeDiameterSvg) || constants.defaultFrustumLargeDiameterSvg,
+      constants.minLargeDiameterSvg,
+      getMaxLargeDiameterForLength(state.frustumLengthSvg),
+    );
+    state.gapRatio = clamp(
+      Number(geometryData.gapRatio) || constants.gapSvg / constants.sphereDiameterSvg,
+      constants.minGapRatio,
+      constants.maxGapRatio,
+    );
+    state.lockProportion = geometryData.lockProportion !== false;
+    state.lockedRatio =
+      Number(geometryData.lockedRatio) ||
+      constants.defaultFrustumLargeDiameterSvg / constants.defaultFrustumLengthSvg;
+    if (proportionLockInput) proportionLockInput.checked = state.lockProportion;
+
+    const mode4Data = motionData.mode4 || {};
+    playMode4.expandedLengthSvg =
+      Number(mode4Data.expandedLengthSvg) || constants.defaultMode4ExpandedLengthSvg;
+    playMode4.zoomOutExtra =
+      Number(mode4Data.zoomOutExtra) || constants.defaultMode4ZoomOutExtra;
+    playMode4.easeAmount =
+      Number(mode4Data.easeAmount) || constants.defaultMode4Ease;
+    playMode4.imageMode = normalizeMode4ImageMode(mode4Data.imageMode);
+    if (mode4ImageModeSelect) mode4ImageModeSelect.value = playMode4.imageMode;
+    for (const image of Array.isArray(mode4Data.images) ? mode4Data.images : []) {
+      const entry = await createPlayMode4ImageEntryFromSource(
+        image.src,
+        image.name || "image",
+      );
+      if (entry) playMode4Images.push(entry);
+    }
+    playMode4TextureIndex = Math.max(0, Math.round(Number(mode4Data.textureIndex) || 0));
+    normalizePlayMode4TextureIndex();
+    updateMode4ImagesStatus();
+
+    const mode5Data = motionData.mode5 || {};
+    playMode5.shapeSpinMs = getMode5ShapeSpinMs(mode5Data.shapeSpinMs);
+    playMode5.shapeHoldMs = getMode5ShapeHoldMs(mode5Data.shapeHoldMs);
+    setMode5CenterMode(mode5Data.centerMode || constants.defaultMode5CenterMode);
+    setMode5StackMode(!!mode5Data.stackMode);
+
+    const mode6Data = motionData.mode6 || {};
+    const hydratedMode6Segments = await hydrateMode6Segments(mode6Data.texts);
+    playMode6.distributionMode = normalizeMode6DistributionMode(mode6Data.distributionMode);
+    playMode6.sphereRadiusScale = getMode6SphereRadiusScale(mode6Data.sphereRadiusScale);
+    playMode6.holdMs = getMode6HoldMs(mode6Data.holdMs);
+    playMode6.transitionMs = getMode6TransitionMs(mode6Data.transitionMs);
+    playMode6.driftHold = !!mode6Data.driftHold;
+    playMode6.fillTextSize = mode6Data.fillTextSize !== false;
+    setMode6Texts(hydratedMode6Segments, {
+      positionOverrides: Array.isArray(mode6Data.positionOverrides)
+        ? mode6Data.positionOverrides
+        : [],
+      render: true,
+    });
+
+    playMode1.environmentEnabled = !!(motionData.play1 && motionData.play1.environmentEnabled);
+    if (motionData.play1 && motionData.play1.environmentUrl) {
+      await applyPlay1EnvironmentSource(motionData.play1.environmentUrl).catch(() => {});
+    }
+
+    const savedPlayMode = ["off", "play1", "play2", "play4", "play5", "play6", "play7"].includes(
+      motionData.playMode,
+    )
+      ? motionData.playMode
+      : "off";
+    playModeSelect.value = savedPlayMode;
+    playModeSelect.dispatchEvent(new Event("change", { bubbles: true }));
+
+    state.cameraZ = Number(cameraData.cameraZ) || constants.defaultCameraZ;
+    state.perspectiveFovDeg =
+      Number.isFinite(Number(cameraData.perspectiveFovDeg))
+        ? Number(cameraData.perspectiveFovDeg)
+        : constants.defaultPerspectiveFovDeg;
+    staticSceneView.cameraZ = state.cameraZ;
+    staticSceneView.perspectiveFovDeg = state.perspectiveFovDeg;
+    if (Array.isArray(cameraData.stagePos)) {
+      stage.pos[0] = Number(cameraData.stagePos[0]) || 0;
+      stage.pos[1] = Number(cameraData.stagePos[1]) || 0;
+      stage.pos[2] = Number(cameraData.stagePos[2]) || 0;
+    }
+    if (cameraData.stageRot) {
+      stage.rotX = Number(cameraData.stageRot.x) || 0;
+      stage.rotY = Number(cameraData.stageRot.y) || 0;
+      stage.rotZ = Number(cameraData.stageRot.z) || 0;
+    }
+
+    syncMode5ShapeTimingInputs();
+    syncMode4ExpandedLengthInput();
+    syncMode4MotionInputs();
+    syncMode6DistributionInput();
+    syncMode6SphereRadiusInputs();
+    syncMode6TimingInputs();
+    syncMode6DriftHoldToggleInput();
+    syncMode6FillTextToggleInput();
+    syncDimensionInputs();
+    syncPerspectiveInputs();
+    syncZoomInputs();
+    applyFrameBackgroundImageLayout();
+    applyTypeGridState();
+    rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
+    updateCameraUniforms();
+    updateTypographyShapeVisibility();
+    updateTypographyOlabLockup();
+    updateTypeTextLayer();
+    syncModePanels();
+    updateRotationInputs();
+    return true;
+  }
+
+  async function loadSelectedPreset() {
+    const id = presetSelect ? presetSelect.value : "";
+    const record = readSavedPresets().find((preset) => preset.id === id);
+    if (!record) {
+      copyStatus.textContent = "Choose a saved preset first.";
+      return;
+    }
+    const ok = await applyStudioPreset(record).catch(() => false);
+    copyStatus.textContent = ok
+      ? `Preset loaded: ${record.name}.`
+      : "Preset load failed.";
+  }
+
+  function deleteSelectedPreset() {
+    const id = presetSelect ? presetSelect.value : "";
+    const presets = readSavedPresets();
+    const target = presets.find((preset) => preset.id === id);
+    if (!target) return;
+    writeSavedPresets(presets.filter((preset) => preset.id !== id));
+    syncPresetControls();
+    copyStatus.textContent = `Preset deleted: ${target.name}.`;
+  }
+
   function syncMode5CenterModeInput() {
     if (!mode5CenterModeSelect) return;
     const normalized = normalizeMode5CenterMode(playMode5.centerMode);
@@ -3946,10 +5071,15 @@
   }
 
   function syncMode5StackToggleInput() {
-    if (!mode5StackToggle) return;
-    if (document.activeElement !== mode5StackToggle) {
+    if (mode5StackToggle && document.activeElement !== mode5StackToggle) {
       mode5StackToggle.checked = !!playMode5.stackMode;
     }
+    mode5StackChoiceButtons.forEach((button) => {
+      const wantsStack = button.dataset.mode5StackChoice === "stack";
+      const selected = wantsStack === !!playMode5.stackMode;
+      button.classList.toggle("is-selected", selected);
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
   }
 
   function syncMode6FillTextToggleInput() {
@@ -4198,6 +5328,7 @@
         type: "image",
         name: typeof segment.name === "string" ? segment.name : "Image",
         src,
+        dataUrl: typeof segment.dataUrl === "string" ? segment.dataUrl : src,
         image: segment.image || null,
         width: Math.max(1, Number(segment.width) || 1),
         height: Math.max(1, Number(segment.height) || 1),
@@ -4232,6 +5363,7 @@
         type: "image",
         name: normalized.name,
         src: normalized.src,
+        dataUrl: normalized.dataUrl,
         image: normalized.image,
         width: normalized.width,
         height: normalized.height,
@@ -4930,7 +6062,9 @@
     removeButton.type = "button";
     removeButton.className = "mode6-segment-remove";
     removeButton.dataset.segmentIndex = String(index);
-    removeButton.textContent = "Remove";
+    removeButton.setAttribute("aria-label", "Remove");
+    removeButton.title = "Remove";
+    removeButton.textContent = "×";
     removeButton.disabled = totalCount <= 1;
     header.appendChild(removeButton);
 
@@ -6884,7 +8018,35 @@
     setCameraZoom(state.cameraZ + event.deltaY * 0.03);
   }
 
+  function isEditableShortcutTarget(target) {
+    if (!(target instanceof HTMLElement)) return false;
+    if (target.isContentEditable || target.closest("[contenteditable='true']")) return true;
+    const tagName = target.tagName.toLowerCase();
+    return tagName === "input" || tagName === "select" || tagName === "textarea";
+  }
+
+  function handleGlobalKeyboardShortcuts(event) {
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+    if (isEditableShortcutTarget(event.target)) return;
+
+    const key = String(event.key || "").toLowerCase();
+    if (event.shiftKey && key === "g") {
+      event.preventDefault();
+      setTypeGridVisible(!state.typeGridVisible);
+      return;
+    }
+
+    if (event.shiftKey) return;
+    if (key === "1" || key === "2" || key === "3" || key === "6") {
+      event.preventDefault();
+      setTypeLayout1EndColumn(Number(key));
+    }
+  }
+
   canvas.addEventListener("wheel", handleZoomWheel, { passive: false });
+  document.addEventListener("keydown", handleGlobalKeyboardShortcuts);
+  renderBrandColorPresets();
+
   if (frame) {
     frame.addEventListener("wheel", handleZoomWheel, { passive: false });
   }
@@ -7002,6 +8164,13 @@
     });
   }
 
+  mode5StackChoiceButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      if (state.playMode !== "play7") return;
+      setMode5StackMode(button.dataset.mode5StackChoice === "stack");
+    });
+  });
+
   if (mode5ShapeSpinSecondsInput) {
     mode5ShapeSpinSecondsInput.addEventListener("input", () => {
       setMode5ShapeSpinSeconds(mode5ShapeSpinSecondsInput.value);
@@ -7054,7 +8223,7 @@
       stage.rotX = playMode5.fixedXRad;
       stage.rotY = 0;
       stage.rotZ = playMode5.fixedZRad;
-      setMode5CenterMode(mode5CenterModeSelect ? mode5CenterModeSelect.value : playMode5.centerMode);
+      setMode5CenterMode("full");
       setMode5StackMode(mode5StackToggle ? mode5StackToggle.checked : false);
       rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
       return;
@@ -7066,7 +8235,7 @@
       stage.rotX = playMode5.fixedXRad;
       stage.rotY = 0;
       stage.rotZ = playMode5.fixedZRad;
-      setMode5CenterMode(mode5CenterModeSelect ? mode5CenterModeSelect.value : playMode5.centerMode);
+      setMode5CenterMode("full");
       setMode5StackMode(false);
       rebuildFrustumFor(state.frustumLengthSvg, state.frustumLargeDiameterSvg);
       return;
@@ -7528,6 +8697,24 @@
     });
   }
 
+  if (frameImageFitSelect) {
+    frameImageFitSelect.addEventListener("change", () => {
+      setFrameImageFit(frameImageFitSelect.value);
+    });
+  }
+
+  if (frameImageScopeSelect) {
+    frameImageScopeSelect.addEventListener("change", () => {
+      setFrameImageScope(frameImageScopeSelect.value);
+    });
+  }
+
+  if (frameImageLayerSelect) {
+    frameImageLayerSelect.addEventListener("change", () => {
+      setFrameImageLayer(frameImageLayerSelect.value);
+    });
+  }
+
   if (framePresetSelect) {
     framePresetSelect.addEventListener("change", () => {
       const preset = framePresets[framePresetSelect.value] || framePresets.custom;
@@ -7554,11 +8741,91 @@
     });
   }
 
+  typeMarkModeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      if (button.disabled) return;
+      setTypeMarkMode(button.dataset.typeMarkMode);
+    });
+  });
+
+  typeLogoPlacementButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      if (button.disabled) return;
+      const placement = button.dataset.typeLogoPlacement;
+      if (state.typeMarkMode === "separate") {
+        if (state.typeLayout1EndColumn === 6 && placement !== "center") return;
+        const align = getPlacementSeparateAlign(placement);
+        if (align) setTypeSeparateAlign(align);
+        return;
+      }
+      if (state.typeLayout1EndColumn === 6 && !getPlacementStretchVertical(placement)) return;
+      setTypeLogoPlacement(placement);
+    });
+  });
+
   if (typeAddTextButton) {
     typeAddTextButton.addEventListener("click", () => {
       addTypeTextBox();
     });
   }
+
+  if (typeClearTextsButton) {
+    typeClearTextsButton.addEventListener("click", () => {
+      clearTypeTextBoxes();
+      copyStatus.textContent = "All text boxes cleared.";
+    });
+  }
+
+  if (typeTextToolbar) {
+    typeTextToolbar.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+    });
+    typeTextToolbar.addEventListener("pointerenter", () => {
+      typeTextToolbarHover = true;
+      queueTypeTextToolbarUpdate();
+    });
+    typeTextToolbar.addEventListener("pointerleave", (event) => {
+      const activeBox = getActiveTypeTextBox();
+      const activeEntry = activeBox ? typeTextBoxElements.get(activeBox.id) : null;
+      const relatedTarget = event.relatedTarget instanceof Node ? event.relatedTarget : null;
+      if (activeEntry && relatedTarget && activeEntry.root.contains(relatedTarget)) {
+        return;
+      }
+      typeTextToolbarHover = false;
+      queueTypeTextToolbarUpdate(120);
+    });
+  }
+
+  document.addEventListener("pointerdown", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.closest(".type-text-box")) return;
+    if (typeTextToolbar && typeTextToolbar.contains(target)) return;
+    if (target.closest(".ui-panel")) return;
+    if (!state.activeTypeTextBoxId && !hoveredTypeTextBoxId && !typeTextToolbarHover) return;
+    hoveredTypeTextBoxId = null;
+    typeTextToolbarHover = false;
+    if (document.activeElement instanceof HTMLElement && document.activeElement.isContentEditable) {
+      document.activeElement.blur();
+    }
+    setActiveTypeTextBox(null);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Alt") {
+      typeTextAltPressed = true;
+    }
+  });
+
+  document.addEventListener("keyup", (event) => {
+    if (event.key === "Alt") {
+      typeTextAltPressed = false;
+    }
+  });
+
+  window.addEventListener("blur", () => {
+    typeTextAltPressed = false;
+  });
 
   if (typeTextScaleUpButton) {
     typeTextScaleUpButton.addEventListener("click", () => {
@@ -7569,6 +8836,12 @@
   if (typeTextScaleDownButton) {
     typeTextScaleDownButton.addEventListener("click", () => {
       scaleActiveTypeTextBox(0.5);
+    });
+  }
+
+  if (typeTextDeleteButton) {
+    typeTextDeleteButton.addEventListener("click", () => {
+      deleteActiveTypeTextBox();
     });
   }
 
@@ -7643,10 +8916,10 @@
     frameHeightInput.value = String(Math.round(state.frameHeight));
   });
 
-  frameImageInput.addEventListener("change", () => {
+  frameImageInput.addEventListener("change", async () => {
     const file = frameImageInput.files && frameImageInput.files[0];
     if (!file) return;
-    const ok = setFrameImageFromFile(file);
+    const ok = await setFrameImageFromFile(file).catch(() => false);
     copyStatus.textContent = ok
       ? "Background image loaded."
       : "Selected file is not an image.";
@@ -7729,9 +9002,14 @@
     staticSceneView.perspectiveFovDeg = state.perspectiveFovDeg;
     state.framePreset = "custom";
     state.frameBgColor = constants.defaultFrameBgColor;
+    state.frameImageFit = constants.defaultFrameImageFit;
+    state.frameImageScope = constants.defaultFrameImageScope;
+    state.frameImageLayer = constants.defaultFrameImageLayer;
     state.typeGridVisible = constants.defaultTypeGridVisible;
     state.typeLayout = constants.defaultTypeLayout;
     state.typeMarkMode = constants.defaultTypeMarkMode;
+    state.typeLogoPlacement = constants.defaultTypeLogoPlacement;
+    state.typeSeparateAlign = constants.defaultTypeSeparateAlign;
     state.typeLayout1EndColumn = constants.defaultTypeLayout1EndColumn;
     state.typeGridColumns = constants.defaultTypeGridColumns;
     state.typeGridMargin = constants.defaultTypeGridMargin;
@@ -7791,6 +9069,8 @@
     updateCameraUniforms();
     syncZoomInputs();
     applyFrameBackgroundColor(state.frameBgColor);
+    clearFrameImage();
+    applyFrameBackgroundImageLayout();
     applyTypeGridState();
     applyFrameSize(constants.defaultFrameWidth, constants.defaultFrameHeight);
     updatePlay1EnvironmentVisual();
@@ -7942,6 +9222,78 @@
       .replace(/>/g, "&gt;");
   }
 
+  function normalizeSvgSolidColor(value) {
+    const raw = String(value || "").trim();
+    const hex = /^#([0-9a-f]{6})$/i.exec(raw);
+    if (hex) return `#${hex[1].toUpperCase()}`;
+    const rgb = /^rgba?\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)(?:\s*,\s*([0-9.]+))?\s*\)$/i.exec(raw);
+    if (!rgb) return raw;
+    const alpha = rgb[4] === undefined ? 1 : Number(rgb[4]);
+    if (Number.isFinite(alpha) && alpha < 1) return raw;
+    const toHex = (component) => {
+      const value = clamp(Math.round(Number(component) || 0), 0, 255);
+      return value.toString(16).padStart(2, "0").toUpperCase();
+    };
+    return `#${toHex(rgb[1])}${toHex(rgb[2])}${toHex(rgb[3])}`;
+  }
+
+  function parseSvgViewBox(value, fallbackWidth, fallbackHeight) {
+    const parts = String(value || "")
+      .trim()
+      .split(/[\s,]+/)
+      .map(Number);
+    if (
+      parts.length === 4 &&
+      parts.every(Number.isFinite) &&
+      parts[2] > 0 &&
+      parts[3] > 0
+    ) {
+      return {
+        x: parts[0],
+        y: parts[1],
+        width: parts[2],
+        height: parts[3],
+      };
+    }
+    return {
+      x: 0,
+      y: 0,
+      width: Math.max(1, Number(fallbackWidth) || 1),
+      height: Math.max(1, Number(fallbackHeight) || 1),
+    };
+  }
+
+  function serializeSvgChildrenWithExplicitFill(svgElement, fillColor) {
+    if (!svgElement) return "";
+    const cloned = svgElement.cloneNode(true);
+    const safeFill = fillColor || getExportInkColor();
+    cloned.querySelectorAll("*").forEach((element) => {
+      const currentFill = element.getAttribute("fill");
+      if (!currentFill || currentFill === "currentColor") {
+        element.setAttribute("fill", safeFill);
+      }
+      if (element.style) {
+        if (element.style.fill === "currentColor") {
+          element.style.fill = safeFill;
+        }
+        if (element.style.color) {
+          element.style.removeProperty("color");
+        }
+      }
+      const tagName = element.tagName ? element.tagName.toLowerCase() : "";
+      if (tagName === "text" || tagName === "tspan") {
+        element.setAttribute("fill", safeFill);
+        if (!element.getAttribute("font-family")) {
+          element.setAttribute("font-family", "Aeonik Fono Exact, Arial, Helvetica Neue, sans-serif");
+        }
+        if (!element.getAttribute("font-weight")) {
+          element.setAttribute("font-weight", "500");
+        }
+      }
+    });
+    return cloned.innerHTML.replace(/currentColor/g, escapeSvgAttr(safeFill));
+  }
+
   function buildTypeGridSvgMarkup(width, height) {
     if (!state.typeGridVisible) return "";
     const spacing = getEffectiveTypeGridSpacing({ width, height });
@@ -7953,18 +9305,15 @@
     const innerHeight = Math.max(1, height - margin * 2);
     const columnWidth = Math.max(1, (innerWidth - gutter * Math.max(0, columns - 1)) / columns);
     const rowHeight = Math.max(1, (innerHeight - gutter * Math.max(0, rows - 1)) / rows);
-    const gridLine = escapeSvgAttr(getCssVariableColor("--grid-line", "rgba(16, 17, 20, 0.1)"));
     const gridFill = escapeSvgAttr(getCssVariableColor("--grid-fill", "rgba(16, 17, 20, 0.035)"));
     const parts = [
-      `<g id="type-grid" fill="${gridFill}" stroke="${gridLine}" stroke-width="1">`,
+      `<g id="type-grid" fill="${gridFill}">`,
     ];
 
     for (let index = 0; index < columns; index += 1) {
       const x = margin + index * (columnWidth + gutter);
       parts.push(
         `<rect x="${x}" y="${margin}" width="${columnWidth}" height="${innerHeight}" stroke="none"/>`,
-        `<line x1="${x}" y1="${margin}" x2="${x}" y2="${margin + innerHeight}"/>`,
-        `<line x1="${x + columnWidth}" y1="${margin}" x2="${x + columnWidth}" y2="${margin + innerHeight}"/>`,
       );
     }
 
@@ -7972,23 +9321,16 @@
       const y = margin + index * (rowHeight + gutter);
       parts.push(
         `<rect x="${margin}" y="${y}" width="${innerWidth}" height="${rowHeight}" stroke="none"/>`,
-        `<line x1="${margin}" y1="${y}" x2="${margin + innerWidth}" y2="${y}"/>`,
-        `<line x1="${margin}" y1="${y + rowHeight}" x2="${margin + innerWidth}" y2="${y + rowHeight}"/>`,
       );
     }
 
     parts.push(
-      `<rect x="${margin}" y="${margin}" width="${innerWidth}" height="${innerHeight}" fill="none"/>`,
       `</g>`,
     );
     return parts.join("");
   }
 
-  function buildProjectedSvgText() {
-    const rect = frame.getBoundingClientRect();
-    const width = Math.max(1, Math.round(rect.width));
-    const height = Math.max(1, Math.round(rect.height));
-
+  function buildProjectedShapeSvgMarkup(width, height) {
     const sphereSamples = sampleSpherePoints(constants.sphereRadiusWorld, 42, 96);
     const frustumSamples = [];
     for (let i = 0; i < frustumLocalPositions.length; i += 3) {
@@ -8026,6 +9368,14 @@
     for (const shape of shapes) {
       paths += `<path d="${shape.path}" fill="${shape.fill}"/>`;
     }
+    return paths;
+  }
+
+  function buildProjectedSvgText() {
+    const rect = frame.getBoundingClientRect();
+    const width = Math.max(1, Math.round(rect.width));
+    const height = Math.max(1, Math.round(rect.height));
+    const paths = buildProjectedShapeSvgMarkup(width, height);
     const gridMarkup = buildTypeGridSvgMarkup(width, height);
 
     return (
@@ -8037,30 +9387,194 @@
     );
   }
 
+  function buildFrameBackgroundImageSvgMarkup(width, height) {
+    if (!state.frameImageDataUrl) return "";
+    const bounds = getFrameImageBounds(width, height);
+    const preserveAspectRatio = state.frameImageFit === "fill" ? "xMidYMid slice" : "xMidYMid meet";
+    const imageHref = escapeSvgAttr(state.frameImageDataUrl);
+    return (
+      `<g id="frame-background-image">` +
+      `<defs><clipPath id="frame-background-image-clip">` +
+      `<rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}"/>` +
+      `</clipPath></defs>` +
+      `<image x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}" ` +
+      `href="${imageHref}" xlink:href="${imageHref}" preserveAspectRatio="${preserveAspectRatio}" ` +
+      `clip-path="url(#frame-background-image-clip)"/>` +
+      `</g>`
+    );
+  }
+
+  function getExportFrameBackgroundFill() {
+    if (!frame) return state.frameBgColor || constants.defaultFrameBgColor;
+    const computed = getComputedStyle(frame).backgroundColor.trim();
+    if (computed && computed !== "transparent" && computed !== "rgba(0, 0, 0, 0)") {
+      return normalizeSvgSolidColor(computed);
+    }
+    return normalizeSvgSolidColor(state.frameBgColor || constants.defaultFrameBgColor);
+  }
+
+  function getExportInkColor() {
+    if (!frame) return normalizeSvgSolidColor(getCssVariableColor("--ink-color", "#101114"));
+    const frameInk = getComputedStyle(frame).getPropertyValue("--ink-color").trim();
+    return normalizeSvgSolidColor(frameInk || getCssVariableColor("--ink-color", "#101114"));
+  }
+
+  function buildVisibleOlabSvgMarkup() {
+    if (!frame) return "";
+    const frameRect = frame.getBoundingClientRect();
+    const inkColor = escapeSvgAttr(getExportInkColor());
+    const parts = [];
+    const wraps = Array.from(frame.querySelectorAll(".mode5-olab-wrap"));
+    wraps.forEach((wrap, index) => {
+      if (!(wrap instanceof HTMLElement)) return;
+      if (wrap.style.display === "none" || wrap.getAttribute("aria-hidden") === "true") return;
+      const sourceSvg = wrap.querySelector(".mode5-olab-svg");
+      if (!sourceSvg || sourceSvg.style.opacity === "0") return;
+      const rect = wrap.getBoundingClientRect();
+      if (!(rect.width > 0) || !(rect.height > 0)) return;
+      const x = rect.left - frameRect.left;
+      const y = rect.top - frameRect.top;
+      const viewBox = parseSvgViewBox(
+        sourceSvg.getAttribute("viewBox"),
+        constants.mode5OlabViewWidthSvg,
+        constants.mode5OlabViewHeightSvg,
+      );
+      const sx = rect.width / viewBox.width;
+      const sy = rect.height / viewBox.height;
+      const content = serializeSvgChildrenWithExplicitFill(sourceSvg, inkColor);
+      parts.push(
+        `<g id="olab-mark-${index + 1}" transform="translate(${x} ${y}) scale(${sx} ${sy}) translate(${-viewBox.x} ${-viewBox.y})">` +
+        content +
+        `</g>`,
+      );
+    });
+    return parts.join("");
+  }
+
+  function syncEditingTypeTextBeforeExport() {
+    state.typeTextBoxes.forEach((item) => {
+      if (!item || !item.isEditing) return;
+      const entry = typeTextBoxElements.get(item.id);
+      if (!entry || !entry.ink) return;
+      item.text = readTypeTextContent(entry.ink);
+    });
+  }
+
+  function buildTypeTextBoxesSvgMarkup() {
+    if (!frame || !typeTextBoxElements.size) return "";
+    const inkColor = escapeSvgAttr(getExportInkColor());
+    const parts = [];
+    state.typeTextBoxes.forEach((item, index) => {
+      const entry = typeTextBoxElements.get(item.id);
+      if (!entry || !entry.root || !entry.svg) return;
+      const left = parseFloat(entry.root.style.left);
+      const top = parseFloat(entry.root.style.top);
+      const width = parseFloat(entry.root.style.width) || parseFloat(entry.svg.getAttribute("width")) || entry.root.offsetWidth;
+      const height = parseFloat(entry.root.style.height) || parseFloat(entry.svg.getAttribute("height")) || entry.root.offsetHeight;
+      if (
+        !Number.isFinite(left) ||
+        !Number.isFinite(top) ||
+        !(width > 0) ||
+        !(height > 0)
+      ) {
+        return;
+      }
+      const viewBox = parseSvgViewBox(entry.svg.getAttribute("viewBox"), width, height);
+      const sx = width / viewBox.width;
+      const sy = height / viewBox.height;
+      const content = serializeSvgChildrenWithExplicitFill(entry.svg, inkColor);
+      parts.push(
+        `<g id="type-text-${index + 1}" transform="translate(${left} ${top}) scale(${sx} ${sy}) translate(${-viewBox.x} ${-viewBox.y})">` +
+        content +
+        `</g>`,
+      );
+    });
+    return parts.join("");
+  }
+
+  function buildCompleteFrameSvgText() {
+    syncEditingTypeTextBeforeExport();
+    updateTypographyOlabLockup();
+    updateTypeTextLayer();
+
+    const rect = frame.getBoundingClientRect();
+    const width = Math.max(1, Math.round(rect.width));
+    const height = Math.max(1, Math.round(rect.height));
+    const backgroundFill = escapeSvgAttr(getExportFrameBackgroundFill());
+    const imageMarkup = buildFrameBackgroundImageSvgMarkup(width, height);
+    const gridMarkup = buildTypeGridSvgMarkup(width, height);
+    const shapeMarkup =
+      canvas && canvas.style.opacity === "0" ? "" : buildProjectedShapeSvgMarkup(width, height);
+    const olabMarkup = buildVisibleOlabSvgMarkup();
+    const textMarkup = buildTypeTextBoxesSvgMarkup();
+
+    return (
+      `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" ` +
+      `viewBox="0 0 ${width} ${height}">` +
+      `<rect id="frame-background" x="0" y="0" width="${width}" height="${height}" fill="${backgroundFill}"/>` +
+      (state.frameImageLayer === "front" ? "" : imageMarkup) +
+      gridMarkup +
+      shapeMarkup +
+      olabMarkup +
+      textMarkup +
+      (state.frameImageLayer === "front" ? imageMarkup : "") +
+      `</svg>`
+    );
+  }
+
+  function buildSvgClipboardHtml(svgText) {
+    return `<!doctype html><html><head><meta charset="utf-8"></head><body>${svgText}</body></html>`;
+  }
+
+  function clipboardTypeIsSupported(type) {
+    if (!window.ClipboardItem) return false;
+    if (typeof window.ClipboardItem.supports === "function") {
+      return window.ClipboardItem.supports(type);
+    }
+    return type === "text/plain" || type === "text/html";
+  }
+
+  async function writeFrameSvgToClipboard(svgText) {
+    if (navigator.clipboard && window.ClipboardItem && navigator.clipboard.write) {
+      const payload = {
+        "text/html": new Blob([buildSvgClipboardHtml(svgText)], { type: "text/html" }),
+        "text/plain": new Blob([svgText], { type: "text/plain" }),
+      };
+
+      if (clipboardTypeIsSupported("image/svg+xml")) {
+        payload["image/svg+xml"] = new Blob([svgText], { type: "image/svg+xml" });
+      }
+
+      try {
+        await navigator.clipboard.write([new ClipboardItem(payload)]);
+        return "rich";
+      } catch (err) {
+        // Some browsers reject rich SVG clipboard payloads from file:// pages.
+      }
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(svgText);
+      return "text";
+    }
+
+    const ok = copyTextFallback(svgText);
+    if (!ok) throw new Error("copy command failed");
+    return "text";
+  }
+
   async function copyCurrentFrameSvg() {
-    const svgText = buildProjectedSvgText();
+    const svgText = buildCompleteFrameSvgText();
 
     try {
-      if (navigator.clipboard && window.ClipboardItem && navigator.clipboard.write) {
-        const svgBlob = new Blob([svgText], { type: "image/svg+xml" });
-        const textBlob = new Blob([svgText], { type: "text/plain" });
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            "image/svg+xml": svgBlob,
-            "text/plain": textBlob,
-          }),
-        ]);
-      } else if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(svgText);
-      } else {
-        const ok = copyTextFallback(svgText);
-        if (!ok) throw new Error("copy command failed");
-      }
-      copyStatus.textContent = "Copied 2-shape projected SVG to clipboard.";
+      const mode = await writeFrameSvgToClipboard(svgText);
+      copyStatus.textContent = mode === "rich"
+        ? "Copied full frame SVG to clipboard."
+        : "Copied full frame SVG as SVG text.";
     } catch (err) {
       const ok = copyTextFallback(svgText);
       copyStatus.textContent = ok
-        ? "Copied 2-shape projected SVG to clipboard."
+        ? "Copied full frame SVG as SVG text."
         : "Copy failed. Browser blocked clipboard access.";
     }
   }
@@ -8259,16 +9773,25 @@
   function drawExportBackgroundImage(ctx, width, height) {
     if (!frame.classList.contains("has-image")) return;
     if (!frameBgImage || !frameBgImage.complete || !frameBgImage.naturalWidth) return;
-    const scale = Math.min(width / frameBgImage.naturalWidth, height / frameBgImage.naturalHeight);
-    const drawWidth = frameBgImage.naturalWidth * scale;
-    const drawHeight = frameBgImage.naturalHeight * scale;
+    const drawRect = getFrameImageDrawRect(
+      width,
+      height,
+      frameBgImage.naturalWidth,
+      frameBgImage.naturalHeight,
+    );
+    const { bounds } = drawRect;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(bounds.x, bounds.y, bounds.width, bounds.height);
+    ctx.clip();
     ctx.drawImage(
       frameBgImage,
-      (width - drawWidth) * 0.5,
-      (height - drawHeight) * 0.5,
-      drawWidth,
-      drawHeight,
+      drawRect.x,
+      drawRect.y,
+      drawRect.width,
+      drawRect.height,
     );
+    ctx.restore();
   }
 
   function drawExportTypeGrid(ctx, width, height) {
@@ -8282,37 +9805,21 @@
     const innerHeight = Math.max(1, height - margin * 2);
     const columnWidth = Math.max(1, (innerWidth - gutter * Math.max(0, columns - 1)) / columns);
     const rowHeight = Math.max(1, (innerHeight - gutter * Math.max(0, rows - 1)) / rows);
-    const gridLine = getCssVariableColor("--grid-line", "rgba(16, 17, 20, 0.1)");
     const gridFill = getCssVariableColor("--grid-fill", "rgba(16, 17, 20, 0.035)");
 
     ctx.save();
     ctx.fillStyle = gridFill;
-    ctx.strokeStyle = gridLine;
-    ctx.lineWidth = 1;
 
     for (let index = 0; index < columns; index += 1) {
       const x = margin + index * (columnWidth + gutter);
       ctx.fillRect(x, margin, columnWidth, innerHeight);
-      ctx.beginPath();
-      ctx.moveTo(x + 0.5, margin);
-      ctx.lineTo(x + 0.5, margin + innerHeight);
-      ctx.moveTo(x + columnWidth - 0.5, margin);
-      ctx.lineTo(x + columnWidth - 0.5, margin + innerHeight);
-      ctx.stroke();
     }
 
     for (let index = 0; index < rows; index += 1) {
       const y = margin + index * (rowHeight + gutter);
       ctx.fillRect(margin, y, innerWidth, rowHeight);
-      ctx.beginPath();
-      ctx.moveTo(margin, y + 0.5);
-      ctx.lineTo(margin + innerWidth, y + 0.5);
-      ctx.moveTo(margin, y + rowHeight - 0.5);
-      ctx.lineTo(margin + innerWidth, y + rowHeight - 0.5);
-      ctx.stroke();
     }
 
-    ctx.strokeRect(margin + 0.5, margin + 0.5, Math.max(1, innerWidth - 1), Math.max(1, innerHeight - 1));
     ctx.restore();
   }
 
@@ -8596,11 +10103,16 @@
     exportCtx.clearRect(0, 0, width, height);
     exportCtx.fillStyle = state.frameBgColor || constants.defaultFrameBgColor;
     exportCtx.fillRect(0, 0, width, height);
-    drawExportBackgroundImage(exportCtx, width, height);
+    if (state.frameImageLayer !== "front") {
+      drawExportBackgroundImage(exportCtx, width, height);
+    }
     drawExportTypeGrid(exportCtx, width, height);
     drawCanvasLayerForExport(exportCtx, canvas, width, height);
     drawMode5OlabForExport(exportCtx);
     drawCanvasLayerForExport(exportCtx, mode6TextCanvas, width, height);
+    if (state.frameImageLayer === "front") {
+      drawExportBackgroundImage(exportCtx, width, height);
+    }
   }
 
   function getSupportedVideoMimeType() {
@@ -8765,6 +10277,30 @@
     });
   }
 
+  if (savePresetButton) {
+    savePresetButton.addEventListener("click", () => {
+      saveCurrentPreset();
+    });
+  }
+
+  if (loadPresetButton) {
+    loadPresetButton.addEventListener("click", () => {
+      loadSelectedPreset();
+    });
+  }
+
+  if (deletePresetButton) {
+    deletePresetButton.addEventListener("click", () => {
+      deleteSelectedPreset();
+    });
+  }
+
+  if (presetSelect) {
+    presetSelect.addEventListener("change", () => {
+      syncPresetControls();
+    });
+  }
+
   shapeColorInput.value = constants.defaultColorHex;
   updateShapeColor(constants.defaultColorHex);
   playModeSelect.value = "off";
@@ -8806,6 +10342,7 @@
   updateTypographyOlabLockup();
   syncZoomInputs();
   updateRotationInputs();
+  syncPresetControls();
 
   let lastFrameMs = performance.now();
   function render(timeMs) {
