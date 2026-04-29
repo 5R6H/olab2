@@ -229,6 +229,22 @@
     "type",
   );
 
+  if (typeOlabInstance && typeOlabInstance.wrap && typeOlabInstance.svg) {
+    typeOlabInstance.wrap.classList.add("type-olab-wrap");
+    typeOlabInstance.svg.classList.add("type-olab-svg");
+    const directPaths = Array.from(typeOlabInstance.svg.children).filter(
+      (node) => node && node.tagName && node.tagName.toLowerCase() === "path",
+    );
+    const combinedOPath = directPaths.length ? directPaths[directPaths.length - 1] : null;
+    if (combinedOPath && combinedOPath.style) {
+      combinedOPath.style.display = "";
+    }
+    if (typeOlabInstance.oSvg) {
+      typeOlabInstance.oSvg.style.display = "none";
+      typeOlabInstance.oSvg.setAttribute("aria-hidden", "true");
+    }
+  }
+
   const mode5OlabInstances = [mode5OlabPrimary, mode5OlabSecondary].filter(Boolean);
   const olabColorInstances = [
     mode5OlabPrimary,
@@ -4176,10 +4192,10 @@
     const olabCenterX = (constants.mode5OlabOCenterXSvg / constants.mode5OlabViewWidthSvg) * widthCss;
     const olabCenterY = (constants.mode5OlabOCenterYSvg / constants.mode5OlabViewHeightSvg) * heightCss;
 
-    typeOlabInstance.wrap.style.left = `${geometry.wordmarkLeftCss}px`;
-    typeOlabInstance.wrap.style.top = `${geometry.wordmarkTopCss}px`;
-    typeOlabInstance.wrap.style.width = `${widthCss}px`;
-    typeOlabInstance.wrap.style.height = `${heightCss}px`;
+    typeOlabInstance.wrap.style.left = `${Math.round(geometry.wordmarkLeftCss)}px`;
+    typeOlabInstance.wrap.style.top = `${Math.round(geometry.wordmarkTopCss)}px`;
+    typeOlabInstance.wrap.style.width = `${Math.round(widthCss)}px`;
+    typeOlabInstance.wrap.style.height = `${Math.round(heightCss)}px`;
     typeOlabInstance.wrap.style.transformOrigin = `${olabCenterX}px ${olabCenterY}px`;
     typeOlabInstance.wrap.style.transform = "none";
     typeOlabInstance.svg.style.transform = "none";

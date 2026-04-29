@@ -1909,6 +1909,19 @@ body {
   color: var(--text);
 }
 
+.type-olab-wrap {
+  transform-style: flat;
+  will-change: auto;
+}
+
+.type-olab-svg {
+  transform-style: flat;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: auto;
+  shape-rendering: geometricPrecision;
+}
+
 #scene {
   position: relative;
   z-index: 2;
