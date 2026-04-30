@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>O.lab Studio</title>
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./vi-manual.css" />
   </head>
   <body>
     <aside class="ui-panel">
@@ -14,6 +15,7 @@
         <button class="ui-tab" type="button" data-tab-target="motion" aria-selected="false">Motion</button>
         <button class="ui-tab" type="button" data-tab-target="output" aria-selected="false">Output</button>
         <button class="ui-tab" type="button" data-tab-target="developer" aria-selected="false">Dev</button>
+        <button class="ui-tab" type="button" data-tab-target="vi-manual" aria-selected="false">VI手册</button>
       </nav>
 
       <section class="ui-section tab-panel is-active" data-tab-panel="foundation">
@@ -539,6 +541,47 @@
           </label>
         </section>
       </section>
+
+      <section class="ui-section tab-panel" data-tab-panel="vi-manual" hidden>
+        <div class="section-head">
+          <p class="section-index">06</p>
+          <div class="section-copy">
+            <h2>VI手册</h2>
+          </div>
+        </div>
+
+        <section class="ui-group">
+          <h2 class="group-title">Document</h2>
+          <p class="vi-panel-note">A 1920 × 1080 PDF-style preview for the visual identity manual.</p>
+          <dl class="vi-spec-list">
+            <div>
+              <dt>Canvas</dt>
+              <dd>1920 × 1080</dd>
+            </div>
+            <div>
+              <dt>Rows</dt>
+              <dd>10</dd>
+            </div>
+            <div>
+              <dt>Columns</dt>
+              <dd>14</dd>
+            </div>
+            <div>
+              <dt>Margin</dt>
+              <dd>50</dd>
+            </div>
+            <div>
+              <dt>Gutter</dt>
+              <dd>14</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="ui-group">
+          <h2 class="group-title">Preview</h2>
+          <p class="copy-status">The manual lives in <span class="mono">vi-manual.js</span> and <span class="mono">vi-manual.css</span> so we can extend it separately from the motion system.</p>
+        </section>
+      </section>
     </aside>
 
     <main id="frame-shell">
@@ -574,6 +617,8 @@
       </div>
       <div id="resize-handle" aria-label="Resize frame" title="Drag to resize"></div>
     </main>
+
+    <section id="vi-manual-shell" aria-label="VI manual PDF preview" hidden></section>
 
     <script>
       (function () {
@@ -615,5 +660,6 @@
       })();
     </script>
     <script src="./main.js"></script>
+    <script src="./vi-manual.js"></script>
   </body>
 </html>

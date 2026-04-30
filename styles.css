@@ -115,7 +115,7 @@ body {
   top: 0;
   z-index: 3;
   display: grid;
-  grid-template-columns: 1.2fr 0.95fr 1fr 0.95fr 0.75fr;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 5px;
   padding: 0;
   border: 0;
@@ -133,8 +133,13 @@ body {
   font: inherit;
   font-size: 0.8rem;
   font-weight: 400;
+  white-space: nowrap;
   cursor: pointer;
   transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.ui-tab[data-tab-target="vi-manual"] {
+  font-size: 0.72rem;
 }
 
 .ui-tab:hover {
