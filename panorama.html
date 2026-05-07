@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>O.lab 360 Panorama</title>
+    <link rel="stylesheet" href="./panorama.css" />
+  </head>
+  <body>
+    <main class="viewer-shell" aria-label="O.lab 360 panorama viewer">
+      <canvas id="panorama-canvas"></canvas>
+
+      <header class="viewer-bar">
+        <div class="brand-lockup">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <h1>O.lab 360</h1>
+        </div>
+        <div class="viewer-controls" aria-label="Panorama controls">
+          <button id="zoom-out-btn" class="icon-btn" type="button" title="Zoom out" aria-label="Zoom out">−</button>
+          <button id="reset-view-btn" class="icon-btn" type="button" title="Reset view" aria-label="Reset view">⌖</button>
+          <button id="zoom-in-btn" class="icon-btn" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+          <button id="auto-rotate-btn" class="icon-btn is-active" type="button" title="Auto rotate" aria-label="Auto rotate" aria-pressed="true">↻</button>
+          <button id="fullscreen-btn" class="icon-btn" type="button" title="Fullscreen" aria-label="Fullscreen">⛶</button>
+        </div>
+      </header>
+
+      <div id="load-state" class="load-state" role="status" aria-live="polite">
+        <span></span>
+      </div>
+    </main>
+
+    <script type="module" src="./panorama.js"></script>
+  </body>
+</html>

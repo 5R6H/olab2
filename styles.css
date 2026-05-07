@@ -3,6 +3,7 @@
   src: url("file:///Users/huyi/Library/Fonts/AeonikFono-Medium.otf") format("opentype");
   font-style: normal;
   font-weight: 500;
+  font-feature-settings: "ss02" 1;
   font-display: swap;
 }
 
@@ -37,6 +38,7 @@
   --ink-color: #101114;
   --ui-font: "Aeonik UI", Arial, "Helvetica Neue", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   --type-font: "Aeonik Fono Exact", Arial, "Helvetica Neue", sans-serif;
+  --type-font-features: "ss02" 1;
 }
 
 html {
@@ -663,6 +665,7 @@ body {
 .mark-preview-word {
   display: block;
   font-family: var(--type-font);
+  font-feature-settings: var(--type-font-features);
   font-size: 17px;
   font-weight: 500;
   line-height: 1;
@@ -1738,6 +1741,7 @@ body {
   background: transparent;
   color: var(--ink-color, var(--text));
   font-family: var(--type-font);
+  font-feature-settings: var(--type-font-features);
   font-weight: 500;
   line-height: 1;
   letter-spacing: -0.03em;
@@ -1844,6 +1848,7 @@ body {
   margin: 0;
   color: var(--text);
   font-family: var(--type-font);
+  font-feature-settings: var(--type-font-features);
   font-size: 44.15px;
   font-weight: 500;
   line-height: 0.84;

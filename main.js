@@ -609,6 +609,7 @@
   function applyTypeTextMeasureFont(node, fontSizeCss) {
     if (!node) return;
     node.style.fontFamily = '"Aeonik Fono Exact", Arial, "Helvetica Neue", sans-serif';
+    node.style.fontFeatureSettings = '"ss02" 1';
     node.style.fontWeight = "500";
     node.style.fontSize = `${fontSizeCss}px`;
     node.style.letterSpacing = `${constants.typeFrameLetterSpacingEm}em`;
@@ -8046,6 +8047,9 @@
     if (isEditableShortcutTarget(event.target)) return;
 
     const key = String(event.key || "").toLowerCase();
+    const activeTab = document.querySelector(".ui-tab.is-active");
+    if (activeTab && activeTab.dataset.tabTarget === "vi-manual") return;
+
     if (event.shiftKey && key === "g") {
       event.preventDefault();
       setTypeGridVisible(!state.typeGridVisible);
@@ -9301,6 +9305,10 @@
         element.setAttribute("fill", safeFill);
         if (!element.getAttribute("font-family")) {
           element.setAttribute("font-family", "Aeonik Fono Exact, Arial, Helvetica Neue, sans-serif");
+        }
+        element.setAttribute("font-feature-settings", '"ss02" 1');
+        if (element.style) {
+          element.style.fontFeatureSettings = '"ss02" 1';
         }
         if (!element.getAttribute("font-weight")) {
           element.setAttribute("font-weight", "500");
