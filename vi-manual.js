@@ -110,9 +110,9 @@
         mark: `<g class="vi-safe-mark" transform="translate(210 220) scale(1.05)">${buildShapeMarkMarkup()}</g>`,
         circles: [
           { cx: 150.5, cy: 160.5, r: 59.5 },
-          { cx: 751.5, cy: 160.5, r: 59.5 },
-          { cx: 150.5, cy: 399.5, r: 59.5 },
-          { cx: 751.5, cy: 399.5, r: 59.5 },
+          { cx: 751.3, cy: 160.5, r: 59.5 },
+          { cx: 150.5, cy: 398.5, r: 59.5 },
+          { cx: 751.3, cy: 398.5, r: 59.5 },
         ],
       },
       wordmark: {
@@ -132,9 +132,9 @@
         mark: `<g class="vi-safe-mark" transform="translate(210 150) scale(1.05)">${buildCombinationMarkMarkup()}</g>`,
         circles: [
           { cx: 150.5, cy: 90.5, r: 59.5 },
-          { cx: 751.5, cy: 90.5, r: 59.5 },
-          { cx: 150.5, cy: 477.5, r: 59.5 },
-          { cx: 751.5, cy: 477.5, r: 59.5 },
+          { cx: 751.3, cy: 90.5, r: 59.5 },
+          { cx: 150.5, cy: 476, r: 59.5 },
+          { cx: 751.3, cy: 476, r: 59.5 },
         ],
       },
     };
@@ -409,23 +409,23 @@
           <line x1="0" y1="257" x2="1000" y2="257"/>
           <line x1="0" y1="423" x2="1000" y2="423"/>
           <line x1="500" y1="0" x2="500" y2="680"/>
-          <line x1="374" y1="0" x2="374" y2="680"/>
-          <line x1="626" y1="0" x2="626" y2="680"/>
+          <line x1="398" y1="0" x2="398" y2="680"/>
+          <line x1="602" y1="0" x2="602" y2="680"/>
         </g>
         <line class="vi-cobrand-divider" x1="500" y1="257" x2="500" y2="423"/>
-        <g class="vi-cobrand-unit" transform="translate(416 465)">
-          <circle r="42"/>
+        <g class="vi-cobrand-unit" transform="translate(432 457)">
+          <circle r="34"/>
         </g>
-        <g class="vi-cobrand-unit" transform="translate(500 465)">
-          <circle r="42"/>
+        <g class="vi-cobrand-unit" transform="translate(500 457)">
+          <circle r="34"/>
         </g>
-        <g class="vi-cobrand-unit" transform="translate(584 465)">
-          <circle r="42"/>
+        <g class="vi-cobrand-unit" transform="translate(568 457)">
+          <circle r="34"/>
         </g>
-        <g class="vi-cobrand-mark" transform="translate(98.6 263.8) scale(0.6)">
+        <g class="vi-cobrand-mark" transform="translate(122.6 263.8) scale(0.6)">
           ${buildCombinationMarkMarkup()}
         </g>
-        <g class="vi-cobrand-mark" transform="translate(626 275.8) scale(0.84)">
+        <g class="vi-cobrand-mark" transform="translate(602 275.8) scale(0.84)">
           ${buildTeenageEngineeringMarkup()}
         </g>
       </svg>
@@ -450,23 +450,23 @@
         <g class="vi-cobrand-guides">
           <line x1="0" y1="340" x2="1000" y2="340"/>
           <line x1="500" y1="0" x2="500" y2="680"/>
-          <line x1="0" y1="233.5" x2="1000" y2="233.5"/>
-          <line x1="0" y1="446.5" x2="1000" y2="446.5"/>
+          <line x1="0" y1="255" x2="1000" y2="255"/>
+          <line x1="0" y1="425" x2="1000" y2="425"/>
         </g>
-        <line class="vi-cobrand-divider" x1="380.4" y1="340" x2="619.6" y2="340"/>
-        <g class="vi-cobrand-unit" transform="translate(655 269)">
-          <circle r="35.5"/>
+        <line class="vi-cobrand-divider" x1="385.3" y1="340" x2="614.7" y2="340"/>
+        <g class="vi-cobrand-unit" transform="translate(586.37 283.34)">
+          <circle r="28.33"/>
         </g>
-        <g class="vi-cobrand-unit" transform="translate(655 340)">
-          <circle r="35.5"/>
+        <g class="vi-cobrand-unit" transform="translate(586.37 340)">
+          <circle r="28.33"/>
         </g>
-        <g class="vi-cobrand-unit" transform="translate(655 411)">
-          <circle r="35.5"/>
+        <g class="vi-cobrand-unit" transform="translate(586.37 396.66)">
+          <circle r="28.33"/>
         </g>
-        <g class="vi-cobrand-mark" transform="translate(385.3 106.5) scale(0.5)">
+        <g class="vi-cobrand-mark" transform="translate(385.3 128) scale(0.5)">
           ${buildCombinationMarkMarkup()}
         </g>
-        <g class="vi-cobrand-mark" transform="translate(380.4 446.5) scale(0.78)">
+        <g class="vi-cobrand-mark" transform="translate(403.4 425) scale(0.63)">
           ${buildTeenageEngineeringMarkup()}
         </g>
       </svg>
@@ -879,23 +879,7 @@
   ];
 
   function buildMotionOverviewMarkup() {
-    return `
-      <div class="vi-motion-overview">
-        ${motionForms
-          .map(
-            (form) => `
-              <section class="vi-motion-form">
-                <p class="vi-motion-form-index">${form.index}</p>
-                <div>
-                  <h2 class="vi-motion-form-title">${form.title}<span>${form.english}</span></h2>
-                  <p class="vi-motion-form-body">${form.body}</p>
-                </div>
-              </section>
-            `
-          )
-          .join("")}
-      </div>
-    `;
+    return "";
   }
 
   function buildMotionOverviewPage(pageNumber) {
@@ -912,24 +896,7 @@
   }
 
   function buildMotionDetailMarkup(form) {
-    return `
-      <div class="vi-motion-demo vi-motion-demo-${form.type}" aria-label="${form.title} ${form.english}">
-        <div class="vi-motion-demo-stage">
-          <div class="vi-motion-demo-orbit" aria-hidden="true"></div>
-          <svg class="vi-motion-symbol" viewBox="0 0 459 114" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            ${buildShapeMarkMarkup()}
-          </svg>
-          <svg class="vi-motion-mark" viewBox="0 0 459 254" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            ${buildCombinationMarkMarkup()}
-          </svg>
-          <div class="vi-motion-text-orbit" aria-hidden="true">
-            <span>Motion</span>
-            <span>System</span>
-            <span>Signal</span>
-          </div>
-        </div>
-      </div>
-    `;
+    return "";
   }
 
   function buildMotionDetailPage(form, pageNumber) {
@@ -974,7 +941,7 @@
           ${buildCoverPage()}
           ${buildLogoFormsPage(1)}
           ${buildLogoFormsSplitPage(2)}
-          ${buildSectionCoverPage(3, "A", "标识系统", "Logo System", "vi-main-section-page")}
+          ${buildSectionCoverPage(3, "A", "标识系统", "Logo", "vi-main-section-page")}
           ${buildSectionCoverPage(4, "A1", "组合标识", "Combination Mark", "vi-sub-section-page")}
           ${buildMarkDisplayPage("combination", false, 5)}
           ${buildMarkDisplayPage("combination", true, 6)}
@@ -1092,10 +1059,6 @@
     downloadBlob(filename, new Blob([text], { type: mimeType }));
   }
 
-  function downloadBytesFile(filename, bytes, mimeType) {
-    downloadBlob(filename, new Blob([bytes], { type: mimeType }));
-  }
-
   function collectExportCssText(includeFontFace = true) {
     const chunks = [];
     Array.from(document.styleSheets).forEach((sheet) => {
@@ -1133,7 +1096,7 @@
     return chunks.join("\n");
   }
 
-  function serializePageForRaster(page, scale, includeFontFace) {
+  function serializePageForForeignObject(page, includeFontFace = true) {
     const wrapper = document.createElement("div");
     const style = document.createElement("style");
     const clone = page.cloneNode(true);
@@ -1141,201 +1104,37 @@
     wrapper.className = `vi-export-page-wrap${manualGridVisible ? " vi-grid-visible" : ""}`;
     style.textContent = collectExportCssText(includeFontFace);
     wrapper.append(style, clone);
-    const html = new XMLSerializer().serializeToString(wrapper);
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${pageWidth * scale}" height="${pageHeight * scale}" viewBox="0 0 ${pageWidth} ${pageHeight}">
-  <foreignObject x="0" y="0" width="${pageWidth}" height="${pageHeight}">
-    ${html}
-  </foreignObject>
-</svg>`;
+    return new XMLSerializer().serializeToString(wrapper);
   }
 
-  function loadImageFromBlob(blob) {
-    return new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(blob);
-      const image = new Image();
-      image.onload = () => {
-        URL.revokeObjectURL(url);
-        resolve(image);
-      };
-      image.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error("Slide image render failed."));
-      };
-      image.src = url;
-    });
-  }
-
-  async function renderPageToDataUrl(page, options = {}) {
-    const scale = Math.max(1, Number(options.scale) || 1);
-    const type = options.type || "image/jpeg";
-    const quality = Number.isFinite(options.quality) ? options.quality : 0.94;
-    const includeFontFace = options.includeFontFace !== false;
-    const svgText = serializePageForRaster(page, scale, includeFontFace);
-    const image = await loadImageFromBlob(new Blob([svgText], { type: "image/svg+xml;charset=utf-8" }));
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Canvas export is not supported.");
-    canvas.width = Math.round(pageWidth * scale);
-    canvas.height = Math.round(pageHeight * scale);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL(type, quality);
-  }
-
-  async function renderManualPagesToImages(options = {}) {
-    const pages = Array.from(shell.querySelectorAll(".vi-page"));
-    const images = [];
-    if (document.fonts && document.fonts.ready) await document.fonts.ready;
-    for (let index = 0; index < pages.length; index += 1) {
-      if (typeof options.onProgress === "function") {
-        options.onProgress(index + 1, pages.length);
-      }
-      try {
-        images.push(await renderPageToDataUrl(pages[index], options));
-      } catch (error) {
-        if (options.includeFontFace === false) throw error;
-        images.push(await renderPageToDataUrl(pages[index], { ...options, includeFontFace: false }));
-      }
-    }
-    return images;
-  }
-
-  function buildFigmaSlidesSvg(imageDataUrls) {
-    const pageMarkup = imageDataUrls
-      .map(
-        (dataUrl, index) => `
+  function buildFigmaSlidesSvgFromPages(pages) {
+    const pageMarkup = pages
+      .map((page, index) => {
+        const html = serializePageForForeignObject(page, false);
+        return `
           <g id="slide-${String(index + 1).padStart(2, "0")}" transform="translate(0 ${index * pageHeight})">
-            <image href="${dataUrl}" xlink:href="${dataUrl}" x="0" y="0" width="${pageWidth}" height="${pageHeight}" preserveAspectRatio="none"/>
+            <rect x="0" y="0" width="${pageWidth}" height="${pageHeight}" fill="#ffffff"/>
+            <foreignObject x="0" y="0" width="${pageWidth}" height="${pageHeight}">
+              ${html}
+            </foreignObject>
           </g>
-        `,
-      )
+        `;
+      })
       .join("");
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${pageWidth}" height="${pageHeight * imageDataUrls.length}" viewBox="0 0 ${pageWidth} ${pageHeight * imageDataUrls.length}">
+<svg xmlns="http://www.w3.org/2000/svg" width="${pageWidth}" height="${pageHeight * pages.length}" viewBox="0 0 ${pageWidth} ${pageHeight * pages.length}">
 ${pageMarkup}
 </svg>`;
   }
 
-  function dataUrlToBytes(dataUrl) {
-    const base64 = String(dataUrl).split(",")[1] || "";
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) {
-      bytes[index] = binary.charCodeAt(index);
-    }
-    return bytes;
-  }
-
-  function asciiBytes(text) {
-    const bytes = new Uint8Array(text.length);
-    for (let index = 0; index < text.length; index += 1) {
-      bytes[index] = text.charCodeAt(index) & 0xff;
-    }
-    return bytes;
-  }
-
-  function buildPdfFromJpegs(imageDataUrls) {
-    const pageCount = imageDataUrls.length;
-    const objectCount = 2 + pageCount * 3;
-    const objects = new Array(objectCount + 1);
-    const kids = [];
-
-    objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
-    for (let index = 0; index < pageCount; index += 1) {
-      const imageObject = 3 + index * 3;
-      const contentObject = imageObject + 1;
-      const pageObject = imageObject + 2;
-      const imageBytes = dataUrlToBytes(imageDataUrls[index]);
-      const content = `q\n${pageWidth} 0 0 ${pageHeight} 0 0 cm\n/Im${index} Do\nQ`;
-      objects[imageObject] = [
-        `<< /Type /XObject /Subtype /Image /Width ${pageWidth} /Height ${pageHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBytes.length} >>\nstream\n`,
-        imageBytes,
-        "\nendstream",
-      ];
-      objects[contentObject] = `<< /Length ${content.length} >>\nstream\n${content}\nendstream`;
-      objects[pageObject] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im${index} ${imageObject} 0 R >> >> /Contents ${contentObject} 0 R >>`;
-      kids.push(`${pageObject} 0 R`);
-    }
-    objects[2] = `<< /Type /Pages /Count ${pageCount} /Kids [${kids.join(" ")}] >>`;
-
-    const parts = [asciiBytes("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n")];
-    const offsets = [0];
-    let byteLength = parts[0].length;
-
-    for (let objectNumber = 1; objectNumber <= objectCount; objectNumber += 1) {
-      offsets[objectNumber] = byteLength;
-      const prefix = asciiBytes(`${objectNumber} 0 obj\n`);
-      const content = objects[objectNumber];
-      const suffix = asciiBytes("\nendobj\n");
-      parts.push(prefix);
-      byteLength += prefix.length;
-      if (Array.isArray(content)) {
-        content.forEach((part) => {
-          const bytes = typeof part === "string" ? asciiBytes(part) : part;
-          parts.push(bytes);
-          byteLength += bytes.length;
-        });
-      } else {
-        const bytes = asciiBytes(String(content));
-        parts.push(bytes);
-        byteLength += bytes.length;
-      }
-      parts.push(suffix);
-      byteLength += suffix.length;
-    }
-
-    const xrefOffset = byteLength;
-    const xrefRows = ["xref", `0 ${objectCount + 1}`, "0000000000 65535 f "];
-    for (let objectNumber = 1; objectNumber <= objectCount; objectNumber += 1) {
-      xrefRows.push(`${String(offsets[objectNumber]).padStart(10, "0")} 00000 n `);
-    }
-    xrefRows.push(
-      "trailer",
-      `<< /Size ${objectCount + 1} /Root 1 0 R >>`,
-      "startxref",
-      String(xrefOffset),
-      "%%EOF",
-    );
-    const tail = asciiBytes(`${xrefRows.join("\n")}\n`);
-    parts.push(tail);
-    byteLength += tail.length;
-
-    const pdf = new Uint8Array(byteLength);
-    let offset = 0;
-    parts.forEach((part) => {
-      pdf.set(part, offset);
-      offset += part.length;
-    });
-    return pdf;
-  }
-
-  async function exportManualPdf() {
+  function exportManualPdf() {
     if (getActiveTabName() !== "vi-manual") {
       setExportStatus("Switch to VI手册 first.");
       return;
     }
-    if (!exportPdfButton) return;
-    exportPdfButton.disabled = true;
-    if (exportFigmaButton) exportFigmaButton.disabled = true;
-    try {
-      const imageDataUrls = await renderManualPagesToImages({
-        scale: 1,
-        type: "image/jpeg",
-        quality: 0.95,
-        onProgress: (current, total) => setExportStatus(`Rendering PDF ${current}/${total}...`),
-      });
-      const pdfBytes = buildPdfFromJpegs(imageDataUrls);
-      downloadBytesFile("olab-vi-manual.pdf", pdfBytes, "application/pdf");
-      setExportStatus("PDF downloaded.");
-    } catch (error) {
-      setExportStatus("PDF export failed.");
-    } finally {
-      exportPdfButton.disabled = false;
-      if (exportFigmaButton) exportFigmaButton.disabled = false;
-    }
+    setExportStatus("Print dialog opened. Choose Save as PDF for a normal PDF.");
+    window.print();
   }
 
   async function exportManualForFigma() {
@@ -1347,15 +1146,11 @@ ${pageMarkup}
     exportFigmaButton.disabled = true;
     if (exportPdfButton) exportPdfButton.disabled = true;
     try {
-      const imageDataUrls = await renderManualPagesToImages({
-        scale: 1,
-        type: "image/jpeg",
-        quality: 0.95,
-        onProgress: (current, total) => setExportStatus(`Rendering Figma SVG ${current}/${total}...`),
-      });
-      const svgText = buildFigmaSlidesSvg(imageDataUrls);
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      const pages = Array.from(shell.querySelectorAll(".vi-page"));
+      const svgText = buildFigmaSlidesSvgFromPages(pages);
       downloadTextFile("olab-vi-manual-figma-slides.svg", svgText, "image/svg+xml;charset=utf-8");
-      setExportStatus("Figma SVG downloaded. Import or drag it into Figma.");
+      setExportStatus("Figma SVG downloaded. Browser export cannot create a native .fig file.");
     } catch (error) {
       setExportStatus("Figma SVG export failed.");
     } finally {
